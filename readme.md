@@ -55,4 +55,23 @@ let df = LazyCsvReader::new(recept_path)
 println!("{:?}", df);
 ```
 
-### P-003: レシート明細データ（df_receipt）から売上年月日（sales_ymd）、顧客 ID（customer_id）、商品コード（product_cd）、売上金額（amount）の順に列を指定し、10 件表示せよ。ただし、sales_ymdsales_date に項目名を変更しながら抽出すること。
+### P-003: レシート明細データ（df_receipt）から売上年月日（sales_ymd）、顧客 ID（customer_id）、商品コード（product_cd）、売上金額（amount）の順に列を指定し、10 件表示せよ。ただし、sales_ymd->sales_date に項目名を変更しながら抽出すること。
+
+```
+let df = LazyCsvReader::new(recept_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .select([
+        col("sales_ymd").alias("sales_date"), // .alias() で項目名を変更できる。pandasより直感的かも。
+        col("customer_id"),
+        col("product_cd"),
+        col("amount"),
+    ])
+    .collect()
+    .unwrap()
+    .head(Some(10));
+
+println!("{:?}", df);
+
+```
