@@ -14,6 +14,7 @@ fn main() {
             col("amount"),
         ])
         .filter(col("customer_id").str().contains("CS018205000001"))
+        .filter(col("amount").gt(lit(1000)))
         .collect()
         .unwrap();
     // .head(Some(10));

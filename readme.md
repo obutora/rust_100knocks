@@ -105,3 +105,27 @@ let df = LazyCsvReader::new(recept_path)
 println!("{:?}", df);
 
 ```
+
+### P-005: レシート明細データ（df_receipt）から売上日（sales_ymd）、顧客 ID（customer_id）、商品コード（product_cd）、売上金額（amount）の順に列を指定し、以下の全ての条件を満たすデータを抽出せよ。
+
+> 顧客 ID（customer_id）が"CS018205000001"
+> 売上金額（amount）が 1,000 以上
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .select([
+        col("sales_ymd"),
+        col("customer_id"),
+        col("product_cd"),
+        col("amount"),
+    ])
+    .filter(col("customer_id").str().contains("CS018205000001"))
+    .filter(col("amount").gt(lit(1000)))
+    .collect()
+    .unwrap();
+
+println!("{:?}", df);
+```
