@@ -11,13 +11,13 @@ fn main() {
             col("sales_ymd"),
             col("customer_id"),
             col("product_cd"),
+            col("quantity"),
             col("amount"),
         ])
         .filter(col("customer_id").str().contains("CS018205000001"))
-        .filter(col("amount").gt(lit(1000)))
+        .filter(col("product_cd").str().contains("[^P071401019]"))
         .collect()
         .unwrap();
-    // .head(Some(10));
 
     println!("{:?}", df);
 }
