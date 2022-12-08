@@ -210,7 +210,7 @@ let df = LazyCsvReader::new(recept_path)
         col("amount"),
     ])
     .filter(col("customer_id").str().contains("CS018205000001"))
-    .filter(col("product_cd").str().contains("[^P071401019]")) // notが使えないので、正規表現でフィルターする
+    .filter(col("product_cd").str().contains("[^(P071401019)]")) // notが使えないので、正規表現でフィルターする
     .collect()
     .unwrap();
 

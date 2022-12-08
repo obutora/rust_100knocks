@@ -15,7 +15,7 @@ fn main() {
             col("amount"),
         ])
         .filter(col("customer_id").str().contains("CS018205000001"))
-        .filter(col("product_cd").str().contains("[^P071401019]"))
+        .filter(col("product_cd").str().contains("[^(P071401019)]"))
         .collect()
         .unwrap();
 
