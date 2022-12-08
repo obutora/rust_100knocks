@@ -24,13 +24,35 @@ println!("{:?}", df.collect().unwrap());
 ### P-001: レシート明細データ（df_receipt）から全項目の先頭 10 件を表示し、どのようなデータを保有しているか目視で確認せよ。
 
 ```
-    let df = LazyCsvReader::new(recept_path)
-        .has_header(true)
-        .finish()
-        .unwrap()
-        .collect()
-        .unwrap()
-        .head(Some(10));
+let df = LazyCsvReader::new(recept_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .collect()
+    .unwrap()
+    .head(Some(10));
 
-    println!("{:?}", df);
+println!("{:?}", df);
 ```
+
+### P-002: レシート明細データ（df_receipt）から売上年月日（sales_ymd）、顧客 ID（customer_id）、商品コード（product_cd）、売上金額（amount）の順に列を指定し、10 件表示せよ。
+
+```
+let df = LazyCsvReader::new(recept_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .select([
+        col("sales_ymd"),
+        col("customer_id"),
+        col("product_cd"),
+        col("amount"),
+    ])
+    .collect()
+    .unwrap()
+    .head(Some(10));
+
+println!("{:?}", df);
+```
+
+### P-003: レシート明細データ（df_receipt）から売上年月日（sales_ymd）、顧客 ID（customer_id）、商品コード（product_cd）、売上金額（amount）の順に列を指定し、10 件表示せよ。ただし、sales_ymdsales_date に項目名を変更しながら抽出すること。
