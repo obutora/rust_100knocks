@@ -7,9 +7,16 @@ fn main() {
         .has_header(true)
         .finish()
         .unwrap()
+        .select([
+            col("sales_ymd"),
+            col("customer_id"),
+            col("product_cd"),
+            col("amount"),
+        ])
+        .filter(col("customer_id").str().contains("CS018205000001"))
         .collect()
-        .unwrap()
-        .head(Some(10));
+        .unwrap();
+    // .head(Some(10));
 
     println!("{:?}", df);
 }

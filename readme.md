@@ -17,7 +17,7 @@ polars = {version = "0.25.1", features=["describe", "lazy", "strings"]}
 
 csv の読み込みは以下の通り。
 
-```
+```rust
 let recept_path = "csvへのパス";
 
 let df: LazyFrame = LazyCsvReader::new(recept_path)
@@ -30,7 +30,7 @@ println!("{:?}", df.collect().unwrap());
 
 ### P-001: レシート明細データ（df_receipt）から全項目の先頭 10 件を表示し、どのようなデータを保有しているか目視で確認せよ。
 
-```
+```rust
 let df = LazyCsvReader::new(recept_path)
     .has_header(true)
     .finish()
@@ -44,7 +44,7 @@ println!("{:?}", df);
 
 ### P-002: レシート明細データ（df_receipt）から売上年月日（sales_ymd）、顧客 ID（customer_id）、商品コード（product_cd）、売上金額（amount）の順に列を指定し、10 件表示せよ。
 
-```
+```rust
 let df = LazyCsvReader::new(recept_path)
     .has_header(true)
     .finish()
@@ -64,7 +64,7 @@ println!("{:?}", df);
 
 ### P-003: レシート明細データ（df_receipt）から売上年月日（sales_ymd）、顧客 ID（customer_id）、商品コード（product_cd）、売上金額（amount）の順に列を指定し、10 件表示せよ。ただし、sales_ymd->sales_date に項目名を変更しながら抽出すること。
 
-```
+```rust
 let df = LazyCsvReader::new(recept_path)
     .has_header(true)
     .finish()
@@ -87,7 +87,7 @@ println!("{:?}", df);
 
 > 顧客 ID（customer_id）が"CS018205000001"
 
-```
+```rust
 let df = LazyCsvReader::new(recept_path)
     .has_header(true)
     .finish()
