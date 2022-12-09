@@ -285,3 +285,17 @@ let df = LazyCsvReader::new(customer_path)
 
     println!("{:?}", df);
 ```
+
+### P-012: 店舗データ（df_store）から、住所 (address) に"横浜市"が含まれるものだけ全項目表示せよ。
+
+```rust
+let df = LazyCsvReader::new(store_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("address").str().contains("横浜市"))
+        .collect()
+        .unwrap();
+
+    println!("{:?}", df);
+```
