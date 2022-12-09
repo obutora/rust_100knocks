@@ -12,7 +12,7 @@ rust の場合、データ分析を行う場合のライブラリはいくつか
 
 ```toml
 [dependencies]
-polars = {version = "0.25.1", features=["describe", "lazy", "strings"]}
+polars = {version = "0.25.1", features=["describe", "lazy", "strings", "rank"]}
 ```
 
 csv の読み込みは以下の通り。
@@ -30,13 +30,17 @@ println!("{:?}", df.collect().unwrap());
 
 ## memo
 
-# 比較演算子
+## 比較演算子
 
 ```
 not equal : neq
 gt_eq : >=
 lt_eq : <=
 ```
+
+## 未解決問題
+
+P19,P20 : Rank を算出する方法が分からない
 
 ### P-001: レシート明細データ（df_receipt）から全項目の先頭 10 件を表示し、どのようなデータを保有しているか目視で確認せよ。
 
@@ -307,10 +311,119 @@ let df = LazyCsvReader::new(customer_path)
         .has_header(true)
         .finish()
         .unwrap()
-        .filter(col("status_cd").str().contains(r"^[A-F]"))
+        .filter(col("status_cd").str().contains(r"^[A-F]")) //正規表現で先頭がA-Fのものを抽出
         .collect()
         .unwrap()
         .head(Some(10));
 
     println!("{:?}", df);
+```
+
+### P-014: 顧客データ（df_customer）から、ステータスコード（status_cd）の末尾が数字の 1〜9 で終わるデータを全項目抽出し、10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("status_cd").str().contains(r"[1-9]$")) //正規表現で末尾が1-9のものを抽出
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
+
+### P-015: 顧客データ（df_customer）から、ステータスコード（status_cd）の先頭がアルファベットの A〜F で始まり、末尾が数字の 1〜9 で終わるデータを全項目抽出し、10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("status_cd").str().contains(r"^[A-F]")) //チェインするだけでカンタンに記述できる
+        .filter(col("status_cd").str().contains(r"[1-9]$"))
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
+
+### P-016: 店舗データ（df_store）から、電話番号（tel_no）が 3 桁-3 桁-4 桁のデータを全項目表示せよ。
+
+```rust
+let df = LazyCsvReader::new(store_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(
+            col("tel_no")
+                .str()
+                .contains(r"^[0-9]{3}-[0-9]{3}-[0-9]{4}$"),
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", df);
+```
+
+### P-017: 顧客データ（df_customer）を生年月日（birth_day）で高齢順にソートし、先頭から全項目を 10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .sort(
+            "birth_day",
+            SortOptions {
+                descending: (false), //高齢順にソート とは、誕生日を昇順にソートすること
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
+
+### P-018: 顧客データ（df_customer）を生年月日（birth_day）で若い順にソートし、先頭から全項目を 10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .sort(
+            "birth_day",
+            SortOptions {
+                descending: (true), //若い順にソート とは、誕生日を降順にソートすること
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
+
+### P-019: レシート明細データ（df_receipt）に対し、1 件あたりの売上金額（amount）が高い順にランクを付与し、先頭から 10 件表示せよ。項目は顧客 ID（customer_id）、売上金額（amount）、付与したランクを表示させること。なお、売上金額（amount）が等しい場合は同一順位を付与するものとする。
+
+### P-020: レシート明細データ（df_receipt）に対し、1 件あたりの売上金額（amount）が高い順にランクを付与し、先頭から 10 件表示せよ。項目は顧客 ID（customer_id）、売上金額（amount）、付与したランクを表示させること。なお、売上金額（amount）が等しい場合でも別順位を付与すること。
+
+### P-021: レシート明細データ（df_receipt）に対し、件数をカウントせよ。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .select([col("customer_id").count().alias("count")])
+    .collect()
+    .unwrap();
+
+println!("{}", df.get(0).unwrap()[0]);
 ```
