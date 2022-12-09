@@ -299,3 +299,18 @@ let df = LazyCsvReader::new(store_path)
 
     println!("{:?}", df);
 ```
+
+### P-013: 顧客データ（df_customer）から、ステータスコード（status_cd）の先頭がアルファベットの A〜F で始まるデータを全項目抽出し、10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("status_cd").str().contains(r"^[A-F]"))
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
