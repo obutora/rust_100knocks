@@ -270,3 +270,18 @@ let df = LazyCsvReader::new(store_path)
 
     println!("{:?}", df);
 ```
+
+### P-011: 顧客データ（df_customer）から顧客 ID（customer_id）の末尾が 1 のものだけ全項目抽出し、10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("customer_id").str().ends_with("1"))
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
