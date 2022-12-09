@@ -15,7 +15,17 @@ fn main() {
             col("amount"),
         ])
         .filter(col("customer_id").str().contains("CS018205000001"))
-        .filter(col("product_cd").str().contains("[^(P071401019)]"))
+        .with_column(when(col("product_cd").str().contains("P071401019"))
+        .then(lit(1))
+        .otherwise(0).alias("isExist"))
+        .filter(col("isExist").eq(0))
+        .select([
+            col("sales_ymd"),
+            col("customer_id"),
+            col("product_cd"),
+            col("quantity"),
+            col("amount"),
+        ])
         .collect()
         .unwrap();
 

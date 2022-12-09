@@ -210,7 +210,17 @@ let df = LazyCsvReader::new(recept_path)
         col("amount"),
     ])
     .filter(col("customer_id").str().contains("CS018205000001"))
-    .filter(col("product_cd").str().contains("[^(P071401019)]")) // notが使えないので、正規表現でフィルターする
+    .with_column(when(col("product_cd").str().contains("P071401019")) //not containsを表現できずフラグを立てた
+        .then(lit(1))
+            .otherwise(0).alias("isExist"))
+    .filter(col("isExist").eq(0)) // 作成したフラグでフィルター
+    .select([
+        col("sales_ymd"),
+        col("customer_id"),
+        col("product_cd"),
+        col("quantity"),
+        col("amount"),
+    ]) //フラグが計算結果に出ないように再度Select
     .collect()
     .unwrap();
 
