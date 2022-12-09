@@ -28,6 +28,16 @@ let df: LazyFrame = LazyCsvReader::new(recept_path)
 println!("{:?}", df.collect().unwrap());
 ```
 
+## memo
+
+# 比較演算子
+
+```
+not equal : neq
+gt_eq : >=
+lt_eq : <=
+```
+
 ### P-001: レシート明細データ（df_receipt）から全項目の先頭 10 件を表示し、どのようなデータを保有しているか目視で確認せよ。
 
 ```rust
@@ -221,6 +231,25 @@ let df = LazyCsvReader::new(recept_path)
         col("quantity"),
         col("amount"),
     ]) //フラグが計算結果に出ないように再度Select
+    .collect()
+    .unwrap();
+
+println!("{:?}", df);
+
+```
+
+### P-009: 以下の処理において、出力結果を変えずに OR を AND に書き換えよ。
+
+> df_store.query('not(prefecture_cd == "13" | floor_area > 900)')
+
+```rust
+let df = LazyCsvReader::new(store_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .filter(col("prefecture_cd").neq(13))
+    .filter(col("floor_area").lt_eq(900))
+    // .filter(col("prefecture_cd").lt(13))
     .collect()
     .unwrap();
 
