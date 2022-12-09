@@ -494,3 +494,23 @@ let df = LazyCsvReader::new(recept_path)
 
 println!("{:?}", df);
 ```
+
+### P-026: レシート明細データ（df_receipt）に対し、顧客 ID（customer_id）ごとに最も新しい売上年月日（sales_ymd）と古い売上年月日を求め、両者が異なるデータを 10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("customer_id")])
+        .agg([
+            col("sales_ymd").min().alias("sales_ymd_min"),
+            col("sales_ymd").max().alias("sales_ymd_max"),
+        ])
+        .filter(col("sales_ymd_min").neq(col("sales_ymd_max")))
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+println!("{:?}", df);
+```
