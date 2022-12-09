@@ -427,3 +427,17 @@ let df = LazyCsvReader::new(recept_path)
 
 println!("{}", df.get(0).unwrap()[0]);
 ```
+
+### P-022: レシート明細データ（df_receipt）の顧客 ID（customer_id）に対し、ユニーク件数をカウントせよ。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([col("customer_id").unique().count().alias("customer_count")])
+        .collect()
+        .unwrap();
+
+println!("{}", df.get(0).unwrap()[0]);
+```
