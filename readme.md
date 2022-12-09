@@ -249,10 +249,24 @@ let df = LazyCsvReader::new(store_path)
     .unwrap()
     .filter(col("prefecture_cd").neq(13))
     .filter(col("floor_area").lt_eq(900))
-    // .filter(col("prefecture_cd").lt(13))
     .collect()
     .unwrap();
 
 println!("{:?}", df);
 
+```
+
+### P-010: 店舗データ（df_store）から、店舗コード（store_cd）が"S14"で始まるものだけ全項目抽出し、10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(store_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("store_cd").str().starts_with("S14")) //starts_withを使える
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
 ```
