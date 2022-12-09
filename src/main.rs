@@ -2,32 +2,19 @@ use polars::prelude::*;
 
 fn main() {
     let recept_path = "100knocks-preprocess/docker/work/data/receipt.csv";
+    // let store_path = "100knocks-preprocess/docker/work/data/store.csv";
+    // let customer_path = "100knocks-preprocess/docker/work/data/customer.csv";
 
     let df = LazyCsvReader::new(recept_path)
         .has_header(true)
         .finish()
         .unwrap()
-        .select([
-            col("sales_ymd"),
-            col("customer_id"),
-            col("product_cd"),
-            col("quantity"),
-            col("amount"),
-        ])
-        .filter(col("customer_id").str().contains("CS018205000001"))
-        .with_column(when(col("product_cd").str().contains("P071401019"))
-        .then(lit(1))
-        .otherwise(0).alias("isExist"))
-        .filter(col("isExist").eq(0))
-        .select([
-            col("sales_ymd"),
-            col("customer_id"),
-            col("product_cd"),
-            col("quantity"),
-            col("amount"),
-        ])
+        .groupby([col("customer_id")])
+        .agg([col("sales_ymd").min().alias("sales_ymd")])
+        // .filter(col("customer_id").str().contains("CS001114000005"))
         .collect()
-        .unwrap();
+        .unwrap()
+        .head(Some(10));
 
     println!("{:?}", df);
 }

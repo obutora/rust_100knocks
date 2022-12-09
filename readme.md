@@ -441,3 +441,56 @@ let df = LazyCsvReader::new(recept_path)
 
 println!("{}", df.get(0).unwrap()[0]);
 ```
+
+### P-023: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）と売上数量（quantity）を合計せよ。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("store_cd")])
+        .agg([
+            col("amount").sum().alias("amount"), //aliasをとらないとエラーになるので注意
+            col("quantity").sum().alias("quantity"),
+        ])
+        .collect()
+        .unwrap();
+
+println!("{:?}", df);
+```
+
+### P-024: レシート明細データ（df_receipt）に対し、顧客 ID（customer_id）ごとに最も新しい売上年月日（sales_ymd）を求め、10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("customer_id")])
+        .agg([col("sales_ymd").max().alias("sales_ymd")])
+        // .filter(col("customer_id").str().contains("CS001114000005"))
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+println!("{:?}", df);
+
+```
+
+### P-025: レシート明細データ（df_receipt）に対し、顧客 ID（customer_id）ごとに最も古い売上年月日（sales_ymd）を求め、10 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("customer_id")])
+        .agg([col("sales_ymd").min().alias("sales_ymd")])
+        // .filter(col("customer_id").str().contains("CS001114000005"))
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+println!("{:?}", df);
+```
