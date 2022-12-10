@@ -648,3 +648,27 @@ let df = LazyCsvReader::new(recept_path)
 
     println!("{:?}", df);
 ```
+
+### P-033: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）の平均を計算し、330 以上のものを抽出せよ。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("store_cd")])
+        .agg([col("amount").mean().alias("mean")])
+        .filter(col("mean").gt_eq(330))
+        .sort(
+            "store_cd",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
