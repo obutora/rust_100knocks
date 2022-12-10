@@ -9,20 +9,32 @@ fn main() {
         .has_header(true)
         .finish()
         .unwrap()
-        .groupby([col("store_cd")])
+        .select([
+            col("store_cd"),
+            col("product_cd")
+        ])
+        .groupby([col("store_cd"), col("product_cd")])
         .agg([
-            col("amount").mean().alias("avg"),
+            col("product_cd").count().alias("count"),
         ])
         .sort(
-            "avg",
+            "count",
             SortOptions {
                 descending: (true), 
                 nulls_last: (true),
             },
         )
+        .sort(
+            "store_cd",
+            SortOptions {
+                descending: (false), 
+                nulls_last: (true),
+            },
+        )
+        .filter(col("store_cd"))
         .collect()
         .unwrap()
-        .head(Some(5));
+        .head(Some(10));
 
     println!("{:?}", df);
 }
