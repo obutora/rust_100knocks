@@ -561,4 +561,6 @@ let df = LazyCsvReader::new(recept_path)
 println!("{:?}", df);
 ```
 
-### 
+### P-029: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに商品コード（product_cd）の最頻値を求め、10件表示させよ。
+```rust
+```
