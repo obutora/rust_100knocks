@@ -514,3 +514,26 @@ let df = LazyCsvReader::new(recept_path)
 
 println!("{:?}", df);
 ```
+### P-027: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）の平均を計算し、降順でTOP5を表示せよ。
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("store_cd")])
+        .agg([
+            col("amount").mean().alias("avg"),
+        ])
+        .sort(
+            "avg",
+            SortOptions {
+                descending: (true), 
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(5));
+
+    println!("{:?}", df);
+```

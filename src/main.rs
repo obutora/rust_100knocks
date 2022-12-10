@@ -9,15 +9,20 @@ fn main() {
         .has_header(true)
         .finish()
         .unwrap()
-        .groupby([col("customer_id")])
+        .groupby([col("store_cd")])
         .agg([
-            col("sales_ymd").min().alias("sales_ymd_min"),
-            col("sales_ymd").max().alias("sales_ymd_max"),
+            col("amount").mean().alias("avg"),
         ])
-        .filter(col("sales_ymd_min").neq(col("sales_ymd_max")))
+        .sort(
+            "avg",
+            SortOptions {
+                descending: (true), 
+                nulls_last: (true),
+            },
+        )
         .collect()
         .unwrap()
-        .head(Some(10));
+        .head(Some(5));
 
     println!("{:?}", df);
 }
