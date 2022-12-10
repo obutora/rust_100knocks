@@ -514,7 +514,9 @@ let df = LazyCsvReader::new(recept_path)
 
 println!("{:?}", df);
 ```
-### P-027: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）の平均を計算し、降順でTOP5を表示せよ。
+
+### P-027: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）の平均を計算し、降順で TOP5 を表示せよ。
+
 ```rust
 let df = LazyCsvReader::new(recept_path)
         .has_header(true)
@@ -527,7 +529,7 @@ let df = LazyCsvReader::new(recept_path)
         .sort(
             "avg",
             SortOptions {
-                descending: (true), 
+                descending: (true),
                 nulls_last: (true),
             },
         )
@@ -537,7 +539,9 @@ let df = LazyCsvReader::new(recept_path)
 
     println!("{:?}", df);
 ```
-### P-028: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）の中央値を計算し、降順でTOP5を表示せよ。
+
+### P-028: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）の中央値を計算し、降順で TOP5 を表示せよ。
+
 ```rust
 let df = LazyCsvReader::new(recept_path)
         .has_header(true)
@@ -550,7 +554,7 @@ let df = LazyCsvReader::new(recept_path)
         .sort(
             "med",
             SortOptions {
-                descending: (true), 
+                descending: (true),
                 nulls_last: (true),
             },
         )
@@ -561,6 +565,35 @@ let df = LazyCsvReader::new(recept_path)
 println!("{:?}", df);
 ```
 
-### P-029: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに商品コード（product_cd）の最頻値を求め、10件表示させよ。
+### P-029: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに商品コード（product_cd）の最頻値を求め、10 件表示させよ。
+
 ```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([col("store_cd"), col("product_cd")])
+        .groupby([col("store_cd"), col("product_cd")])
+        .agg([col("product_cd").count().alias("count")]) //#1 最初にカウント列を作成
+        .sort(                                           //#2 多い順に並び替え
+            "count",
+            SortOptions {
+                descending: (true),
+                nulls_last: (true),
+            },
+        )
+        .groupby([col("store_cd")])
+        .agg([col("product_cd").first().alias("product_cd")]) //#3 最初の値を取得
+        .sort(
+            "store_cd",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
 ```
