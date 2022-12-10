@@ -691,3 +691,29 @@ let df = LazyCsvReader::new(recept_path)
 
     println!("{:?}", df);
 ```
+
+### P-035: レシート明細データ（df_receipt）に対し、顧客 ID（customer_id）ごとに売上金額（amount）を合計して全顧客の平均を求め、平均以上に買い物をしている顧客を抽出し、10 件表示せよ。ただし、顧客 ID が"Z"から始まるものは非会員を表すため、除外して計算すること。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("customer_id").str().contains("^[A-Y]"))
+        .groupby([col("customer_id")])
+        .agg([col("amount").sum().alias("amount_sum")])
+        .with_column(col("amount_sum").mean().alias("amount_mean"))
+        .filter(col("amount_sum").gt_eq(col("amount_mean")))
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
