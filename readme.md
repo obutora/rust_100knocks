@@ -597,3 +597,54 @@ let df = LazyCsvReader::new(recept_path)
 
     println!("{:?}", df);
 ```
+
+### P-030: レシート明細データ（df_receipt）に対し、店舗コード（store_cd）ごとに売上金額（amount）の分散を計算し、降順で 5 件表示せよ。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("store_cd")])
+        .agg([col("amount").var(0).alias("var")])
+        .sort(
+            "var",
+            SortOptions {
+                descending: (true),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
+
+### P-032: レシート明細データ（df_receipt）の売上金額（amount）について、25％刻みでパーセンタイル値を求めよ。
+
+```rust
+let df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("amount")
+                .quantile(0.25f64, QuantileInterpolOptions::Nearest)
+                .alias("q1"),
+            col("amount")
+                .quantile(0.5f64, QuantileInterpolOptions::Nearest)
+                .alias("q2"),
+            col("amount")
+                .quantile(0.75f64, QuantileInterpolOptions::Nearest)
+                .alias("q3"),
+            col("amount")
+                .quantile(1f64, QuantileInterpolOptions::Nearest)
+                .alias("q4"),
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", df);
+```
