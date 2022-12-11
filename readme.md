@@ -742,3 +742,58 @@ let joined = recept_df
 
 println!("{:?}", joined);
 ```
+
+### P-037: 商品データ（df_product）とカテゴリデータ（df_category）を内部結合し、商品データの全項目とカテゴリデータのカテゴリ小区分名（category_small_name）を 10 件表示せよ。
+
+```rust
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+let category_df = LazyCsvReader::new(category_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([col("category_small_cd"), col("category_small_name")]);
+
+let joined = product_df
+        .inner_join(
+            category_df,
+            col("category_small_cd"),
+            col("category_small_cd"),
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", joined);
+```
+
+### P-038: 顧客データ（df_customer）とレシート明細データ（df_receipt）から、顧客ごとの売上金額合計を求め、10 件表示せよ。ただし、売上実績がない顧客については売上金額を 0 として表示させること。また、顧客は性別コード（gender_cd）が女性（1）であるものを対象とし、非会員（顧客 ID が"Z"から始まるもの）は除外すること。
+
+```rust
+let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("gender_cd").eq(1))
+        .filter(col("customer_id").str().contains("^[A-Y]"));
+
+let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("customer_id")])
+        .agg([col("amount").sum().alias("amount_sum")]);
+
+let joined = customer_df
+        .left_join(recept_df, col("customer_id"), col("customer_id"))
+        .with_column(col("amount_sum").fill_null(lit(0)).alias("amount"))
+        .select([col("customer_id"), col("amount")])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", joined);
+```
