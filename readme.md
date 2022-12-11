@@ -717,3 +717,28 @@ let df = LazyCsvReader::new(recept_path)
 
     println!("{:?}", df);
 ```
+
+### P-036: レシート明細データ（df_receipt）と店舗データ（df_store）を内部結合し、レシート明細データの全項目と店舗データの店舗名（store_name）を 10 件表示せよ。
+
+```rust
+let recept_df = LazyCsvReader::new(recept_path)
+    .has_header(true)
+    .finish()
+    .unwrap();
+
+let store_df = LazyCsvReader::new(store_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .select([col("store_cd"), col("store_name")])
+    .collect()
+    .unwrap();
+
+let joined = recept_df
+    .inner_join(store_df.lazy(), col("store_cd"), col("store_cd"))
+    .collect()
+    .unwrap()
+    .head(Some(10));
+
+println!("{:?}", joined);
+```
