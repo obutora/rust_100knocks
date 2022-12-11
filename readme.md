@@ -797,3 +797,59 @@ let joined = customer_df
 
     println!("{:?}", joined);
 ```
+
+### P-039: レシート明細データ（df_receipt）から、売上日数の多い顧客の上位 20 件を抽出したデータと、売上金額合計の多い顧客の上位 20 件を抽出したデータをそれぞれ作成し、さらにその 2 つを完全外部結合せよ。ただし、非会員（顧客 ID が"Z"から始まるもの）は除外すること。
+
+```rust
+let recept_count = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("customer_id").str().contains("^[A-Y]"))
+        .groupby([col("customer_id")])
+        .agg([col("sales_ymd").n_unique().alias("count")])
+        .sort(
+            "count",
+            SortOptions {
+                descending: (true),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(20));
+
+let recept_amount = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("customer_id").str().contains("^[A-Y]"))
+        .groupby([col("customer_id")])
+        .agg([col("amount").sum().alias("sum")])
+        .sort(
+            "sum",
+            SortOptions {
+                descending: (true),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(20));
+
+let joined = recept_count
+        .lazy()
+        .outer_join(recept_amount.lazy(), col("customer_id"), col("customer_id"))
+        .sort(
+            "count",
+            SortOptions {
+                descending: (true),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", joined)
+
+```
