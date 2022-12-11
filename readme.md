@@ -853,3 +853,32 @@ let joined = recept_count
     println!("{:?}", joined)
 
 ```
+
+### P-040: 全ての店舗と全ての商品を組み合わせたデータを作成したい。店舗データ（df_store）と商品データ（df_product）を直積し、件数を計算せよ。
+
+> cross_join が上手く呼び出せず失敗してしまう。
+
+```rust
+    let store_df = LazyCsvReader::new(store_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let joined = store_df
+        .join(product_df, vec![], vec![], JoinType::Cross)
+        .collect()
+        .unwrap();
+
+    println!("{:?}", joined);
+```
+
+### P-041: レシート明細データ（df_receipt）の売上金額（amount）を日付（sales_ymd）ごとに集計し、前回売上があった日からの売上金額増減を計算せよ。そして結果を 10 件表示せよ。
+
+```rust
+
+```
