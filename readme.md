@@ -901,6 +901,22 @@ let recept_df = LazyCsvReader::new(recept_path)
         .with_columns([
             (col("today") - col("past")).alias("diff")
         ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+
+    println!("{:?}", recept_df);
+```
+### P-042: レシート明細データ（df_receipt）の売上金額（amount）を日付（sales_ymd）ごとに集計し、各日付のデータに対し、前回、前々回、3回前に売上があった日のデータを結合せよ。そして結果を10件表示せよ。
+
+```rust
+let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("sales_ymd")])
+        .agg([col("amount").sum().alias("today")])
         .sort(
             "sales_ymd",
             SortOptions {
@@ -908,6 +924,13 @@ let recept_df = LazyCsvReader::new(recept_path)
                 nulls_last: (true),
             },
         )
+        .select([
+            col("sales_ymd"),
+            col("today"),
+            col("today").shift(1).alias("past1"),
+            col("today").shift(2).alias("past2"),
+            col("today").shift(3).alias("past3"),
+        ])
         .collect()
         .unwrap()
         .head(Some(10));
