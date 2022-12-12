@@ -1014,3 +1014,80 @@ let recept_df = LazyCsvReader::new(recept_path)
 
     println!("{:?}", merged);
 ```
+
+### P-044： 043 で作成した売上サマリデータ（df_sales_summary）は性別の売上を横持ちさせたものであった。このデータから性別を縦持ちさせ、年代、性別コード、売上金額の 3 項目に変換せよ。ただし、性別コードは男性を"00"、女性を"01"、不明を"99"とする。
+
+```rust
+ let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    fn calc_era(age: &Series) -> Series {
+        age.i64()
+            .unwrap()
+            .into_iter()
+            .map(|age| match age {
+                Some(age) => (age as f64 / 10.0).floor() * 10.0,
+                None => 0f64,
+            })
+            .collect()
+    }
+
+    fn replace_gender_code(code: &Series) -> Series {
+        code.i64()
+            .unwrap()
+            .into_iter()
+            .map(|code| match code {
+                Some(code) => match code {
+                    0 => "00",
+                    1 => "01",
+                    _ => "99",
+                },
+                None => "",
+            })
+            .collect()
+    }
+
+    let mut customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("customer_id"),
+            col("gender_cd"),
+            col("age").alias("era"),
+        ])
+        .collect()
+        .unwrap();
+
+    customer_df.apply("era", calc_era).unwrap(); //era列を追加
+
+    let mut joined = customer_df
+        .lazy()
+        .inner_join(recept_df, col("customer_id"), col("customer_id"))
+        .groupby([col("era"), col("gender_cd")])
+        .agg([col("amount").sum().alias("sum")])
+        .sort(
+            "gender_cd",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .sort(
+            "era",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap();
+
+    joined.apply("gender_cd", replace_gender_code).unwrap();
+
+    println!("{:?}", joined);
+```
+
+### P-045: 顧客データ（df_customer）の生年月日（birth_day）は日付型でデータを保有している。これを YYYYMMDD 形式の文字列に変換し、顧客 ID（customer_id）とともに 10 件表示せよ。
