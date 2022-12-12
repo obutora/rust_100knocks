@@ -908,7 +908,8 @@ let recept_df = LazyCsvReader::new(recept_path)
 
     println!("{:?}", recept_df);
 ```
-### P-042: レシート明細データ（df_receipt）の売上金額（amount）を日付（sales_ymd）ごとに集計し、各日付のデータに対し、前回、前々回、3回前に売上があった日のデータを結合せよ。そして結果を10件表示せよ。
+
+### P-042: レシート明細データ（df_receipt）の売上金額（amount）を日付（sales_ymd）ごとに集計し、各日付のデータに対し、前回、前々回、3 回前に売上があった日のデータを結合せよ。そして結果を 10 件表示せよ。
 
 ```rust
 let recept_df = LazyCsvReader::new(recept_path)
@@ -937,4 +938,79 @@ let recept_df = LazyCsvReader::new(recept_path)
 
 
     println!("{:?}", recept_df);
+```
+
+### P-043： レシート明細データ（df_receipt）と顧客データ（df_customer）を結合し、性別コード（gender_cd）と年代（age から計算）ごとに売上金額（amount）を合計した売上サマリデータを作成せよ。性別コードは 0 が男性、1 が女性、9 が不明を表すものとする。
+
+> ただし、項目構成は年代、女性の売上金額、男性の売上金額、性別不明の売上金額の 4 項目とすること（縦に年代、横に性別のクロス集計）。
+> また、年代は 10 歳ごとの階級とすること。
+
+```rust
+let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    fn calc_era(age: &Series) -> Series {
+        age.i64()
+            .unwrap()
+            .into_iter()
+            .map(|age| match age {
+                Some(age) => (age as f64 / 10.0).floor() * 10.0,
+                None => 0f64,
+            })
+            .collect()
+    }
+
+    let mut customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("customer_id"),
+            col("gender_cd"),
+            col("age").alias("era"),
+        ])
+        .collect()
+        .unwrap();
+
+    customer_df.apply("era", calc_era).unwrap(); //era列を追加
+
+    let joined = customer_df
+        .lazy()
+        .left_join(recept_df, col("customer_id"), col("customer_id"))
+        .groupby([col("gender_cd"), col("era")])
+        .agg([col("amount").sum().alias("sum")]);
+
+    // どうやってもpivotが呼び出せないので、性別ごとに分けてmergeする戦略へ移行する。
+    // lazyFrameを使えるので、遅延評価される。
+    let male = joined
+        .clone()
+        .filter(col("gender_cd").eq(0))
+        .select([col("era"), col("sum").alias("male")]);
+
+    let female = joined
+        .clone()
+        .filter(col("gender_cd").eq(1))
+        .select([col("era"), col("sum").alias("female")]);
+
+    let unknown = joined
+        .clone()
+        .filter(col("gender_cd").eq(9))
+        .select([col("era"), col("sum").alias("unknown")]);
+
+    let merged = male
+        .left_join(female, col("era"), col("era"))
+        .left_join(unknown, col("era"), col("era"))
+        .sort(
+            "era",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", merged);
 ```
