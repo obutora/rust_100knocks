@@ -880,5 +880,38 @@ let joined = recept_count
 ### P-041: レシート明細データ（df_receipt）の売上金額（amount）を日付（sales_ymd）ごとに集計し、前回売上があった日からの売上金額増減を計算せよ。そして結果を 10 件表示せよ。
 
 ```rust
+let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("sales_ymd")])
+        .agg([col("amount").sum().alias("today")])
+        .sort(
+            "sales_ymd",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .select([
+            col("sales_ymd"),
+            col("today"),
+            col("today").shift(1).alias("past"),
+        ])
+        .with_columns([
+            (col("today") - col("past")).alias("diff")
+        ])
+        .sort(
+            "sales_ymd",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
 
+
+    println!("{:?}", recept_df);
 ```
