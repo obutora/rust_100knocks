@@ -1091,25 +1091,33 @@ let recept_df = LazyCsvReader::new(recept_path)
 ```
 
 ### P-045: 顧客データ（df_customer）の生年月日（birth_day）は日付型でデータを保有している。これを YYYYMMDD 形式の文字列に変換し、顧客 ID（customer_id）とともに 10 件表示せよ。
-
-> NOTE: format できてません
-
 ```rust
-let customer_df = LazyCsvReader::new(customer_path)
+fn format_birth(birth : &Series) -> Series {
+        birth.utf8()
+        .unwrap()
+        .into_iter()
+        .map(|birth| match birth {
+            Some(birth) => birth.replace("-", ""),
+            None => "".to_string(),
+        })
+        .collect()
+    }
+
+    let customer_df = LazyCsvReader::new(customer_path)
         .has_header(true)
         .finish()
         .unwrap()
         .select([
             col("customer_id"),
-            col("birth_day").str().strptime(StrpTimeOptions {
-                fmt: Some("%Y-%m-%d".to_string()),
-                date_dtype: DataType::Date,
-                ..Default::default()
-            }),
+            col("birth_day")
         ])
         .collect()
+        .unwrap()
+        .apply("birth_day",format_birth)
         .unwrap()
         .head(Some(10));
 
     println!("{:?}", customer_df);
 ```
+
+
