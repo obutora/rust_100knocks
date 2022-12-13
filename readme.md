@@ -1407,3 +1407,50 @@ let customer_df = LazyCsvReader::new(customer_path)
     println!("{}", joined);
 
 ```
+
+### P-054: 顧客データ（df_customer）の住所（address）は、埼玉県、千葉県、東京都、神奈川県のいずれかとなっている。都道府県毎にコード値を作成し、顧客 ID、住所とともに 10 件表示せよ。値は埼玉県を 11、千葉県を 12、東京都を 13、神奈川県を 14 とすること。
+
+```rust
+fn define_prefecture(address: &Series) -> Series {
+        address
+            .utf8()
+            .unwrap()
+            .into_iter()
+            .map(|address| match address {
+                Some(address) => {
+                    let pref = &address[0..9]; //漢字は3バイト
+                    match pref {
+                        "埼玉県" => 11,
+                        "千葉県" => 12,
+                        "東京都" => 13,
+                        "神奈川" => 14,
+                        &_ => 0,
+                    }
+                }
+                None => 0,
+            })
+            .collect()
+    }
+
+    let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([col("customer_id"), col("address")])
+        .with_column(
+            col("address")
+                .map(|s| Ok(define_prefecture(&s)), GetOutput::default())
+                .alias("pref"),
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{}", customer_df);
+```
+
+### P-055: レシート明細（df_receipt）データの売上金額（amount）を顧客 ID（customer_id）ごとに合計し、その合計金額の四分位点を求めよ。その上で、顧客ごとの売上金額合計に対して以下の基準でカテゴリ値を作成し、顧客 ID、売上金額合計とともに 10 件表示せよ。カテゴリ値は順に 1〜4 とする。
+
+```rust
+
+```
