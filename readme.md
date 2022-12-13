@@ -1197,3 +1197,42 @@ fn to_str_series(date: &Series) -> Series{
     println!("{:?}", customer_df);
 ```
 
+### P-048: レシート明細データ（df_receipt）の売上エポック秒（sales_epoch）は数値型のUNIX秒でデータを保有している。これを日付型に変換し、レシート番号(receipt_no)、レシートサブ番号（receipt_sub_no）とともに10件表示せよ。
+```rust
+fn to_str_series(date: &Series) -> Series{
+        date.i64()
+        .unwrap()
+        .into_iter()
+        .map(|date| match date {
+            // Some(date) => date.to_string(),
+            Some(date) => Utc.timestamp_opt(date, 0).unwrap().to_string(),
+            None => "".to_string(),
+        })
+        .collect()
+    }
+
+    let customer_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("receipt_no"),
+            col("receipt_sub_no"),
+            // col("sales_epoch")
+            col("sales_epoch").map(|s| Ok(to_str_series(&s)), GetOutput::default())
+        ])
+        .select([
+            col("receipt_no"),
+            col("receipt_sub_no"),
+            col("sales_epoch").str().strptime(StrpTimeOptions {
+                    fmt: Some("%Y-%m-%d".to_string()),
+                    date_dtype: DataType::Date,
+                    ..Default::default()
+                })
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", customer_df);
+```
