@@ -1120,4 +1120,41 @@ fn format_birth(birth : &Series) -> Series {
     println!("{:?}", customer_df);
 ```
 
+### P-046: 顧客データ（df_customer）の申し込み日（application_date）はYYYYMMDD形式の文字列型でデータを保有している。これを日付型に変換し、顧客ID（customer_id）とともに10件表示せよ。
 
+```rust
+fn to_str_series(date: &Series) -> Series{
+        date.i64()
+        .unwrap()
+        .into_iter()
+        .map(|date| match date {
+            Some(date) => date.to_string(),
+            None => "".to_string(),
+        })
+        .collect()
+    }
+
+    let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("customer_id"),
+            col("application_date").map(|s| Ok(to_str_series(&s)), GetOutput::default())
+        ])
+        .select([
+            col("customer_id"),
+            col("application_date").str().strptime(StrpTimeOptions {
+                    fmt: Some("%Y%m%d".to_string()),
+                    date_dtype: DataType::Date,
+                    ..Default::default()
+                })
+        ])
+        .collect()
+        .unwrap()
+        // .apply("application_date", to_str_series)
+        // .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", customer_df);
+```
