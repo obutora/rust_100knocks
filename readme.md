@@ -1451,6 +1451,79 @@ fn define_prefecture(address: &Series) -> Series {
 
 ### P-055: レシート明細（df_receipt）データの売上金額（amount）を顧客 ID（customer_id）ごとに合計し、その合計金額の四分位点を求めよ。その上で、顧客ごとの売上金額合計に対して以下の基準でカテゴリ値を作成し、顧客 ID、売上金額合計とともに 10 件表示せよ。カテゴリ値は順に 1〜4 とする。
 
-```rust
+> - 最小値以上第 1 四分位未満 ・・・ 1 を付与
+> - 第 1 四分位以上第 2 四分位未満 ・・・ 2 を付与
+> - 第 2 四分位以上第 3 四分位未満 ・・・ 3 を付与
+> - 第 3 四分位以上 ・・・ 4 を付与
 
+```rust
+fn define_quantile(amount: &Series) -> Series {
+        let q1 = amount
+            .quantile_as_series(0.25f64, QuantileInterpolOptions::Nearest)
+            .unwrap()
+            .f64()
+            .unwrap()
+            .get(0)
+            .unwrap();
+
+        let q2 = amount
+            .quantile_as_series(0.5f64, QuantileInterpolOptions::Nearest)
+            .unwrap()
+            .f64()
+            .unwrap()
+            .get(0)
+            .unwrap();
+
+        let q3 = amount
+            .quantile_as_series(0.75f64, QuantileInterpolOptions::Nearest)
+            .unwrap()
+            .f64()
+            .unwrap()
+            .get(0)
+            .unwrap();
+
+        amount
+            .i64()
+            .unwrap()
+            .into_iter()
+            .map(|amount| match amount {
+                Some(amount) => {
+                    if amount as f64 <= q1 {
+                        1
+                    } else if amount as f64 <= q2 {
+                        2
+                    } else if amount as f64 <= q3 {
+                        3
+                    } else {
+                        4
+                    }
+                }
+                None => 0,
+            })
+            .collect()
+    }
+
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("customer_id")])
+        .agg([col("amount").sum().alias("total_amount")])
+        .with_column(
+            col("total_amount")
+                .map(|s| Ok(define_quantile(&s)), GetOutput::default())
+                .alias("quantile"),
+        )
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{}", recept_df);
 ```
