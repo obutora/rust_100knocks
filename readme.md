@@ -1091,6 +1091,7 @@ let recept_df = LazyCsvReader::new(recept_path)
 ```
 
 ### P-045: 顧客データ（df_customer）の生年月日（birth_day）は日付型でデータを保有している。これを YYYYMMDD 形式の文字列に変換し、顧客 ID（customer_id）とともに 10 件表示せよ。
+
 ```rust
 fn format_birth(birth : &Series) -> Series {
         birth.utf8()
@@ -1120,7 +1121,7 @@ fn format_birth(birth : &Series) -> Series {
     println!("{:?}", customer_df);
 ```
 
-### P-046: 顧客データ（df_customer）の申し込み日（application_date）はYYYYMMDD形式の文字列型でデータを保有している。これを日付型に変換し、顧客ID（customer_id）とともに10件表示せよ。
+### P-046: 顧客データ（df_customer）の申し込み日（application_date）は YYYYMMDD 形式の文字列型でデータを保有している。これを日付型に変換し、顧客 ID（customer_id）とともに 10 件表示せよ。
 
 ```rust
 fn to_str_series(date: &Series) -> Series{
@@ -1159,7 +1160,8 @@ fn to_str_series(date: &Series) -> Series{
     println!("{:?}", customer_df);
 ```
 
-### P-047: レシート明細データ（df_receipt）の売上日（sales_ymd）はYYYYMMDD形式の数値型でデータを保有している。これを日付型に変換し、レシート番号（receipt_no）、レシートサブ番号（receipt_sub_no）とともに10件表示せよ。
+### P-047: レシート明細データ（df_receipt）の売上日（sales_ymd）は YYYYMMDD 形式の数値型でデータを保有している。これを日付型に変換し、レシート番号（receipt_no）、レシートサブ番号（receipt_sub_no）とともに 10 件表示せよ。
+
 ```rust
 fn to_str_series(date: &Series) -> Series{
         date.i64()
@@ -1197,7 +1199,8 @@ fn to_str_series(date: &Series) -> Series{
     println!("{:?}", customer_df);
 ```
 
-### P-048: レシート明細データ（df_receipt）の売上エポック秒（sales_epoch）は数値型のUNIX秒でデータを保有している。これを日付型に変換し、レシート番号(receipt_no)、レシートサブ番号（receipt_sub_no）とともに10件表示せよ。
+### P-048: レシート明細データ（df_receipt）の売上エポック秒（sales_epoch）は数値型の UNIX 秒でデータを保有している。これを日付型に変換し、レシート番号(receipt_no)、レシートサブ番号（receipt_sub_no）とともに 10 件表示せよ。
+
 ```rust
 fn to_str_series(date: &Series) -> Series{
         date.i64()
@@ -1237,7 +1240,170 @@ fn to_str_series(date: &Series) -> Series{
     println!("{:?}", customer_df);
 ```
 
-### P-049: レシート明細データ（df_receipt）の売上エポック秒（sales_epoch）を日付型に変換し、「年」だけ取り出してレシート番号(receipt_no)、レシートサブ番号（receipt_sub_no）とともに10件表示せよ。
+### P-049: レシート明細データ（df_receipt）の売上エポック秒（sales_epoch）を日付型に変換し、「年」だけ取り出してレシート番号(receipt_no)、レシートサブ番号（receipt_sub_no）とともに 10 件表示せよ。
+
 ```rust
+fn to_str_series(date: &Series) -> Series {
+        date.i64()
+            .unwrap()
+            .into_iter()
+            .map(|date| match date {
+                Some(date) => Utc.timestamp_opt(date, 0).unwrap().format("%Y").to_string(),
+                None => "".to_string(),
+            })
+            .collect()
+    }
+
+    let customer_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("receipt_no"),
+            col("receipt_sub_no"),
+            col("sales_epoch").map(|s| Ok(to_str_series(&s)), GetOutput::default()),
+        ])
+        .select([col("receipt_no"), col("receipt_sub_no"), col("sales_epoch")])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", customer_df);
+```
+
+### P-050: レシート明細データ（df_receipt）の売上エポック秒（sales_epoch）を日付型に変換し、「月」だけ取り出してレシート番号(receipt_no)、レシートサブ番号（receipt_sub_no）とともに 10 件表示せよ。なお、「月」は 0 埋め 2 桁で取り出すこと。
+
+```rust
+fn to_str_series(date: &Series) -> Series {
+        date.i64()
+            .unwrap()
+            .into_iter()
+            .map(|date| match date {
+                Some(date) => Utc.timestamp_opt(date, 0).unwrap().format("%m").to_string(),
+                None => "".to_string(),
+            })
+            .collect()
+    }
+
+    let customer_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("receipt_no"),
+            col("receipt_sub_no"),
+            col("sales_epoch").map(|s| Ok(to_str_series(&s)), GetOutput::default()),
+        ])
+        .select([col("receipt_no"), col("receipt_sub_no"), col("sales_epoch")])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", customer_df);
+```
+
+### P-051: レシート明細データ（df_receipt）の売上エポック秒を日付型に変換し、「日」だけ取り出してレシート番号(receipt_no)、レシートサブ番号（receipt_sub_no）とともに 10 件表示せよ。なお、「日」は 0 埋め 2 桁で取り出すこと。
+
+```rust
+fn to_str_series(date: &Series) -> Series {
+        date.i64()
+            .unwrap()
+            .into_iter()
+            .map(|date| match date {
+                Some(date) => Utc.timestamp_opt(date, 0).unwrap().format("%d").to_string(),
+                None => "".to_string(),
+            })
+            .collect()
+    }
+
+    let customer_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("receipt_no"),
+            col("receipt_sub_no"),
+            col("sales_epoch").map(|s| Ok(to_str_series(&s)), GetOutput::default()),
+        ])
+        .select([col("receipt_no"), col("receipt_sub_no"), col("sales_epoch")])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", customer_df);
+```
+
+### P-052: レシート明細データ（df_receipt）の売上金額（amount）を顧客 ID（customer_id）ごとに合計の上、売上金額合計に対して 2,000 円以下を 0、2,000 円より大きい金額を 1 に二値化し、顧客 ID、売上金額合計とともに 10 件表示せよ。ただし、顧客 ID が"Z"から始まるのものは非会員を表すため、除外して計算すること。
+
+```rust
+let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("customer_id").str().contains("^[A-Y]"))
+        .groupby([col("customer_id")])
+        .agg([col("amount").sum().alias("amount_sum")])
+        .with_column(
+            when(col("amount_sum").gt_eq(2000))
+                .then(1)
+                .otherwise(0)
+                .alias("amount_flg"),
+        )
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", recept_df);
+```
+
+### P-053: 顧客データ（df_customer）の郵便番号（postal_cd）に対し、東京（先頭 3 桁が 100〜209 のもの）を 1、それ以外のものを 0 に二値化せよ。さらにレシート明細データ（df_receipt）と結合し、全期間において売上実績のある顧客数を、作成した二値ごとにカウントせよ。
+
+```rust
+let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .with_column(
+            when(
+                col("postal_cd")
+                    .str()
+                    .contains("^[1][0-9][0-9]|^[2][0][0-9]"),
+            )
+            .then(1)
+            .otherwise(0)
+            .alias("flag"),
+        )
+        .select([col("customer_id"), col("postal_cd"), col("flag")])
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        );
+
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let joined = customer_df
+        .inner_join(recept_df, col("customer_id"), col("customer_id"))
+        .select([col("customer_id"), col("flag")])
+        .unique(None, UniqueKeepStrategy::First) //customer_idで重複しているものがあるので削除
+        .groupby([col("flag")])
+        .agg([col("flag").count().alias("flag_count")])
+        .collect()
+        .unwrap();
+
+
+    println!("{}", joined);
 
 ```

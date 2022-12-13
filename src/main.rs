@@ -1,46 +1,48 @@
-use polars::{prelude::*, lazy::dsl::GetOutput, export::chrono::{Utc, TimeZone}};
+use polars::prelude::*;
 
 fn main() {
     let recept_path = "100knocks-preprocess/docker/work/data/receipt.csv";
     // let store_path = "100knocks-preprocess/docker/work/data/store.csv";
-    // let customer_path = "100knocks-preprocess/docker/work/data/customer.csv";
+    let customer_path = "100knocks-preprocess/docker/work/data/customer.csv";
     // let product_path = "100knocks-preprocess/docker/work/data/product.csv";
     // let category_path = "100knocks-preprocess/docker/work/data/category.csv";
 
-    fn to_str_series(date: &Series) -> Series{
-        date.i64()
-        .unwrap()
-        .into_iter()
-        .map(|date| match date {
-            // Some(date) => date.to_string(),
-            Some(date) => Utc.timestamp_opt(date, 0).unwrap().to_string(),
-            None => "".to_string(),
-        })
-        .collect()
-    }
-
-    let customer_df = LazyCsvReader::new(recept_path)
+    let customer_df = LazyCsvReader::new(customer_path)
         .has_header(true)
         .finish()
         .unwrap()
-        .select([
-            col("receipt_no"),
-            col("receipt_sub_no"),
-            // col("sales_epoch")
-            col("sales_epoch").map(|s| Ok(to_str_series(&s)), GetOutput::default())
-        ])
-        .select([
-            col("receipt_no"),
-            col("receipt_sub_no"),
-            col("sales_epoch").str().strptime(StrpTimeOptions {
-                    fmt: Some("%Y-%m-%d".to_string()),
-                    date_dtype: DataType::Date,
-                    ..Default::default()
-                })
-        ])
-        .collect()
-        .unwrap()
-        .head(Some(10));
+        .with_column(
+            when(
+                col("postal_cd")
+                    .str()
+                    .contains("^[1][0-9][0-9]|^[2][0][0-9]"),
+            )
+            .then(1)
+            .otherwise(0)
+            .alias("flag"),
+        )
+        .select([col("customer_id"), col("postal_cd"), col("flag")])
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        );
 
-    println!("{:?}", customer_df);
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let joined = customer_df
+        .inner_join(recept_df, col("customer_id"), col("customer_id"))
+        .select([col("customer_id"), col("flag")])
+        .unique(None, UniqueKeepStrategy::First) //customer_idで重複しているものがあるので削除
+        .groupby([col("flag")])
+        .agg([col("flag").count().alias("flag_count")])
+        .collect()
+        .unwrap();
+
+    println!("{}", joined);
 }
