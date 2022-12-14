@@ -1661,3 +1661,29 @@ fn to_dummy(val: &Series, code:i8) -> Series {
 
     println!("{:?}", customer_df);
 ```
+
+### P-059: レシート明細データ（df_receipt）の売上金額（amount）を顧客ID（customer_id）ごとに合計し、売上金額合計を平均0、標準偏差1に標準化して顧客ID、売上金額合計とともに10件表示せよ。標準化に使用する標準偏差は、分散の平方根、もしくは不偏分散の平方根のどちらでも良いものとする。ただし、顧客IDが"Z"から始まるのものは非会員を表すため、除外して計算すること。
+```rust
+//TODO : 売上金額合計を平均0、標準偏差1に標準化が出来ていないので解けていません。
+let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("customer_id").str().contains("^[A-Y]"))
+        .groupby([col("customer_id")])
+        .agg([
+            col("amount").sum().alias("amount"),
+            col("amount").std(0).alias("std"),
+        ])
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", recept_df);
+```
