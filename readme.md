@@ -1687,3 +1687,46 @@ let recept_df = LazyCsvReader::new(recept_path)
 
     println!("{:?}", recept_df);
 ```
+
+### P-060: レシート明細データ（df_receipt）の売上金額（amount）を顧客ID（customer_id）ごとに合計し、売上金額合計を最小値0、最大値1に正規化して顧客ID、売上金額合計とともに10件表示せよ。ただし、顧客IDが"Z"から始まるのものは非会員を表すため、除外して計算すること。
+//TODO: normalizationを見つけられず、1から実装するのも趣旨と異なる気がしたので一旦保留
+
+### P-061: レシート明細データ（df_receipt）の売上金額（amount）を顧客ID（customer_id）ごとに合計し、売上金額合計を常用対数化（底10）して顧客ID、売上金額合計とともに10件表示せよ。ただし、顧客IDが"Z"から始まるのものは非会員を表すため、除外して計算すること。
+```rust
+fn to_log(val: &Series) -> Series {
+        val.i64()
+            .unwrap()
+            .into_iter()
+            .map(|val| match val {
+                Some(val) => (val as f64).log10(),
+                None => 0f64,
+            })
+            .collect()
+    }
+
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("customer_id").str().contains("^[A-Y]"))
+        .groupby([col("customer_id")])
+        .agg([
+            col("amount").sum().alias("amount"),
+        ])
+        .with_column(
+            col("amount")
+            .map(|s| Ok(to_log(&s)), GetOutput::default())
+                .alias("log"),
+        )
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", recept_df);
+```

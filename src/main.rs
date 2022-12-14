@@ -7,6 +7,17 @@ fn main() {
     // let product_path = "100knocks-preprocess/docker/work/data/product.csv";
     // let category_path = "100knocks-preprocess/docker/work/data/category.csv";
 
+    fn to_log(val: &Series) -> Series {
+        val.i64()
+            .unwrap()
+            .into_iter()
+            .map(|val| match val {
+                Some(val) => (val as f64).log10(),
+                None => 0f64,
+            })
+            .collect()
+    }
+
     let recept_df = LazyCsvReader::new(recept_path)
         .has_header(true)
         .finish()
@@ -15,8 +26,12 @@ fn main() {
         .groupby([col("customer_id")])
         .agg([
             col("amount").sum().alias("amount"),
-            col("amount").std(0).alias("std"),
         ])
+        .with_column(
+            col("amount")
+            .map(|s| Ok(to_log(&s)), GetOutput::default())
+                .alias("log"),
+        )
         .sort(
             "customer_id",
             SortOptions {
