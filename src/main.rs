@@ -37,9 +37,14 @@ fn main() {
             )
         .select([
             col("customer_id"),
+            col("gender_cd"),//本来指定なかったが、検証に便利なので入れている
             col("birth_day"),
-            col("age"),
-            col("era")
+            col("age"), //本来指定なかったが、検証に便利なので入れている
+            col("era"),
+            fold_exprs(lit(0), |a, b| Ok(&a + &b), [
+                col("gender_cd"),
+                col("era")
+            ]).alias("gender_era")
         ])
         .collect()
         .unwrap()

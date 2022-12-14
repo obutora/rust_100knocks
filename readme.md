@@ -1569,3 +1569,51 @@ fn calc_era(age: &Series) -> Series {
 
     println!("{:?}", customer_df);
 ```
+
+### P-057: 056の抽出結果と性別コード（gender_cd）により、新たに性別×年代の組み合わせを表すカテゴリデータを作成し、10件表示せよ。組み合わせを表すカテゴリの値は任意とする。
+```rust
+fn calc_era(age: &Series) -> Series {
+        age.i64()
+            .unwrap()
+            .into_iter()
+            .map(|age| match age {
+                Some(age) => {
+                    let era = ((age as f64 / 10.0).floor()) * 10.0;
+
+                    if age > 60 {
+                        return 60f64
+                    } else {
+                        return era
+                    }
+                },
+                None => 0f64,
+            })
+            .collect()
+    }
+
+
+    let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .with_column(col("age")
+        .map(|s| Ok(calc_era(&s)), GetOutput::default())
+                .alias("era"),
+            )
+        .select([
+            col("customer_id"),
+            col("gender_cd"),//本来指定なかったが、検証に便利なので入れている
+            col("birth_day"),
+            col("age"), //本来指定なかったが、検証に便利なので入れている
+            col("era"),
+            fold_exprs(lit(0), |a, b| Ok(&a + &b), [
+                col("gender_cd"),
+                col("era")
+            ]).alias("gender_era")
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", customer_df);
+```
