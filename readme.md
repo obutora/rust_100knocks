@@ -1404,7 +1404,7 @@ let customer_df = LazyCsvReader::new(customer_path)
         .unwrap();
 
 
-    println!("{}", joined);
+    println!("{:?}", joined);
 
 ```
 
@@ -1446,7 +1446,7 @@ fn define_prefecture(address: &Series) -> Series {
         .unwrap()
         .head(Some(10));
 
-    println!("{}", customer_df);
+    println!("{:?}", customer_df);
 ```
 
 ### P-055: レシート明細（df_receipt）データの売上金額（amount）を顧客 ID（customer_id）ごとに合計し、その合計金額の四分位点を求めよ。その上で、顧客ごとの売上金額合計に対して以下の基準でカテゴリ値を作成し、顧客 ID、売上金額合計とともに 10 件表示せよ。カテゴリ値は順に 1〜4 とする。
@@ -1525,5 +1525,47 @@ fn define_quantile(amount: &Series) -> Series {
         .unwrap()
         .head(Some(10));
 
-    println!("{}", recept_df);
+    println!("{:?}", recept_df);
+```
+### P-056: 顧客データ（df_customer）の年齢（age）をもとに10歳刻みで年代を算出し、顧客ID（customer_id）、生年月日（birth_day）とともに10件表示せよ。ただし、60歳以上は全て60歳代とすること。年代を表すカテゴリ名は任意とする。
+```rust
+fn calc_era(age: &Series) -> Series {
+        age.i64()
+            .unwrap()
+            .into_iter()
+            .map(|age| match age {
+                Some(age) => {
+                    let era = ((age as f64 / 10.0).floor()) * 10.0;
+
+                    if age > 60 {
+                        return 60f64
+                    } else {
+                        return era
+                    }
+                },
+                None => 0f64,
+            })
+            .collect()
+    }
+
+
+    let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .with_column(col("age")
+        .map(|s| Ok(calc_era(&s)), GetOutput::default())
+                .alias("era"),
+            )
+        .select([
+            col("customer_id"),
+            col("birth_day"),
+            col("age"), //本来指定なかったが、検証に便利なので入れている
+            col("era")
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", customer_df);
 ```
