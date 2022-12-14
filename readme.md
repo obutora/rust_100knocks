@@ -1771,3 +1771,20 @@ fn to_ln(val: &Series) -> Series {
 
     println!("{:?}", recept_df);
 ```
+
+### P-063: 商品データ（df_product）の単価（unit_price）と原価（unit_cost）から各商品の利益額を算出し、結果を10件表示せよ。
+```rust
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("*"),
+            (col("unit_price") - col("unit_cost")).alias("unit_profit")
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", product_df);
+```
