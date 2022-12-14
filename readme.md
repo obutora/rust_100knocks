@@ -1915,3 +1915,48 @@ let product_df = LazyCsvReader::new(product_path)
 
     println!("{:?}", product_df);
 ```
+
+### P-069: レシート明細データ（df_receipt）と商品データ（df_product）を結合し、顧客毎に全商品の売上金額合計と、カテゴリ大区分コード（category_major_cd）が"07"（瓶詰缶詰）の売上金額合計を計算の上、両者の比率を求めよ。抽出対象はカテゴリ大区分コード"07"（瓶詰缶詰）の売上実績がある顧客のみとし、結果を 10 件表示せよ。
+
+```rust
+let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let joined = recept_df
+        .inner_join(product_df, "product_cd", "product_cd")
+        .select([col("customer_id"), col("category_major_cd"), col("amount")])
+        .with_column(
+            when(col("category_major_cd").eq(7))
+                .then(col("amount"))
+                .otherwise(0)
+                .alias("7_amount"),
+        )
+        .groupby([col("customer_id")])
+        .agg([
+            col("amount").sum().alias("total_amount"),
+            col("7_amount").sum().alias("7_amount"),
+        ])
+        .select([
+            col("*"),
+            (col("7_amount").cast(DataType::Float64) / col("total_amount")).alias("sales_rate"),
+        ])
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", joined);
+```
