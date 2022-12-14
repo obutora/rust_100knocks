@@ -7,12 +7,12 @@ fn main() {
     // let product_path = "100knocks-preprocess/docker/work/data/product.csv";
     // let category_path = "100knocks-preprocess/docker/work/data/category.csv";
 
-    fn to_year(s: &Series) -> Series {
+    fn to_epoch(s: &Series) -> Series {
         s.duration()
             .unwrap()
             .into_iter()
             .map(|date| match date {
-                Some(date) => date / 31_556_952_000, // ms to year
+                Some(date) => date / 1000,
                 None => 0,
             })
             .collect()
@@ -52,10 +52,10 @@ fn main() {
         ])
         .with_column(
             ((col("sales_ymd") - col("application_date"))
-                .map(|s| Ok(to_year(&s)), GetOutput::default()))
+                .map(|s| Ok(to_epoch(&s)), GetOutput::default()))
             .alias("diff"),
         )
-        .filter(col("customer_id").str().contains("CS006214000001"))
+        .filter(col("customer_id").str().contains("CS006214000001")) //PythonのAnswerと同じ結果を出すために便宜的に追加。題意には含まれない。
         .collect()
         .unwrap()
         .head(Some(10));
