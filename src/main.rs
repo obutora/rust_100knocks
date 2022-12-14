@@ -12,13 +12,13 @@ fn main() {
         .has_header(true)
         .finish()
         .unwrap()
+        .filter(col("*").is_not_null())
         .select([
-            col("*"),
-            (col("unit_price") - col("unit_cost")).alias("unit_profit")
+            ((col("unit_price") - col("unit_cost")).cast(DataType::Float32) / col("unit_price")).alias("rate")
         ])
+        .mean()
         .collect()
-        .unwrap()
-        .head(Some(10));
+        .unwrap();
 
-    println!("{:?}", product_df);
+    println!("{}", product_df.get_columns()[0].get(0));
 }

@@ -1788,3 +1788,20 @@ let product_df = LazyCsvReader::new(product_path)
 
     println!("{:?}", product_df);
 ```
+
+### P-064: 商品データ（df_product）の単価（unit_price）と原価（unit_cost）から、各商品の利益率の全体平均を算出せよ。ただし、単価と原価には欠損が生じていることに注意せよ。
+```rust
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("*").is_not_null())
+        .select([
+            ((col("unit_price") - col("unit_cost")).cast(DataType::Float32) / col("unit_price")).alias("rate")
+        ])
+        .mean()
+        .collect()
+        .unwrap();
+
+    println!("{}", product_df.get_columns()[0].get(0));
+```
