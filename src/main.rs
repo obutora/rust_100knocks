@@ -7,18 +7,21 @@ fn main() {
     let product_path = "100knocks-preprocess/docker/work/data/product.csv";
     // let category_path = "100knocks-preprocess/docker/work/data/category.csv";
 
-
     let product_df = LazyCsvReader::new(product_path)
         .has_header(true)
         .finish()
         .unwrap()
         .filter(col("*").is_not_null())
         .select([
-            ((col("unit_price") - col("unit_cost")).cast(DataType::Float32) / col("unit_price")).alias("rate")
+            col("*"),
+            ((col("unit_price") * lit(1.1))
+                .cast(DataType::Float32)
+                .floor())
+            .alias("tax_price"),
         ])
-        .mean()
         .collect()
-        .unwrap();
+        .unwrap()
+        .head(Some(10));
 
-    println!("{}", product_df.get_columns()[0].get(0));
+    println!("{:?}", product_df);
 }

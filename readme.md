@@ -1527,7 +1527,9 @@ fn define_quantile(amount: &Series) -> Series {
 
     println!("{:?}", recept_df);
 ```
-### P-056: 顧客データ（df_customer）の年齢（age）をもとに10歳刻みで年代を算出し、顧客ID（customer_id）、生年月日（birth_day）とともに10件表示せよ。ただし、60歳以上は全て60歳代とすること。年代を表すカテゴリ名は任意とする。
+
+### P-056: 顧客データ（df_customer）の年齢（age）をもとに 10 歳刻みで年代を算出し、顧客 ID（customer_id）、生年月日（birth_day）とともに 10 件表示せよ。ただし、60 歳以上は全て 60 歳代とすること。年代を表すカテゴリ名は任意とする。
+
 ```rust
 fn calc_era(age: &Series) -> Series {
         age.i64()
@@ -1570,7 +1572,8 @@ fn calc_era(age: &Series) -> Series {
     println!("{:?}", customer_df);
 ```
 
-### P-057: 056の抽出結果と性別コード（gender_cd）により、新たに性別×年代の組み合わせを表すカテゴリデータを作成し、10件表示せよ。組み合わせを表すカテゴリの値は任意とする。
+### P-057: 056 の抽出結果と性別コード（gender_cd）により、新たに性別 × 年代の組み合わせを表すカテゴリデータを作成し、10 件表示せよ。組み合わせを表すカテゴリの値は任意とする。
+
 ```rust
 fn calc_era(age: &Series) -> Series {
         age.i64()
@@ -1619,7 +1622,8 @@ fn calc_era(age: &Series) -> Series {
     println!("{:?}", customer_df);
 ```
 
-### P-058: 顧客データ（df_customer）の性別コード（gender_cd）をダミー変数化し、顧客ID（customer_id）とともに10件表示せよ。
+### P-058: 顧客データ（df_customer）の性別コード（gender_cd）をダミー変数化し、顧客 ID（customer_id）とともに 10 件表示せよ。
+
 ```rust
 fn to_dummy(val: &Series, code:i8) -> Series {
         val.i64()
@@ -1662,7 +1666,8 @@ fn to_dummy(val: &Series, code:i8) -> Series {
     println!("{:?}", customer_df);
 ```
 
-### P-059: レシート明細データ（df_receipt）の売上金額（amount）を顧客ID（customer_id）ごとに合計し、売上金額合計を平均0、標準偏差1に標準化して顧客ID、売上金額合計とともに10件表示せよ。標準化に使用する標準偏差は、分散の平方根、もしくは不偏分散の平方根のどちらでも良いものとする。ただし、顧客IDが"Z"から始まるのものは非会員を表すため、除外して計算すること。
+### P-059: レシート明細データ（df_receipt）の売上金額（amount）を顧客 ID（customer_id）ごとに合計し、売上金額合計を平均 0、標準偏差 1 に標準化して顧客 ID、売上金額合計とともに 10 件表示せよ。標準化に使用する標準偏差は、分散の平方根、もしくは不偏分散の平方根のどちらでも良いものとする。ただし、顧客 ID が"Z"から始まるのものは非会員を表すため、除外して計算すること。
+
 ```rust
 //TODO : 売上金額合計を平均0、標準偏差1に標準化が出来ていないので解けていません。
 let recept_df = LazyCsvReader::new(recept_path)
@@ -1688,10 +1693,12 @@ let recept_df = LazyCsvReader::new(recept_path)
     println!("{:?}", recept_df);
 ```
 
-### P-060: レシート明細データ（df_receipt）の売上金額（amount）を顧客ID（customer_id）ごとに合計し、売上金額合計を最小値0、最大値1に正規化して顧客ID、売上金額合計とともに10件表示せよ。ただし、顧客IDが"Z"から始まるのものは非会員を表すため、除外して計算すること。
-//TODO: normalizationを見つけられず、1から実装するのも趣旨と異なる気がしたので一旦保留
+### P-060: レシート明細データ（df_receipt）の売上金額（amount）を顧客 ID（customer_id）ごとに合計し、売上金額合計を最小値 0、最大値 1 に正規化して顧客 ID、売上金額合計とともに 10 件表示せよ。ただし、顧客 ID が"Z"から始まるのものは非会員を表すため、除外して計算すること。
 
-### P-061: レシート明細データ（df_receipt）の売上金額（amount）を顧客ID（customer_id）ごとに合計し、売上金額合計を常用対数化（底10）して顧客ID、売上金額合計とともに10件表示せよ。ただし、顧客IDが"Z"から始まるのものは非会員を表すため、除外して計算すること。
+//TODO: normalization を見つけられず、1 から実装するのも趣旨と異なる気がしたので一旦保留
+
+### P-061: レシート明細データ（df_receipt）の売上金額（amount）を顧客 ID（customer_id）ごとに合計し、売上金額合計を常用対数化（底 10）して顧客 ID、売上金額合計とともに 10 件表示せよ。ただし、顧客 ID が"Z"から始まるのものは非会員を表すため、除外して計算すること。
+
 ```rust
 fn to_log(val: &Series) -> Series {
         val.i64()
@@ -1731,7 +1738,8 @@ fn to_log(val: &Series) -> Series {
     println!("{:?}", recept_df);
 ```
 
-### P-062: レシート明細データ（df_receipt）の売上金額（amount）を顧客ID（customer_id）ごとに合計し、売上金額合計を自然対数化（底e）して顧客ID、売上金額合計とともに10件表示せよ。ただし、顧客IDが"Z"から始まるのものは非会員を表すため、除外して計算すること。
+### P-062: レシート明細データ（df_receipt）の売上金額（amount）を顧客 ID（customer_id）ごとに合計し、売上金額合計を自然対数化（底 e）して顧客 ID、売上金額合計とともに 10 件表示せよ。ただし、顧客 ID が"Z"から始まるのものは非会員を表すため、除外して計算すること。
+
 ```rust
 fn to_ln(val: &Series) -> Series {
         val.i64()
@@ -1772,7 +1780,8 @@ fn to_ln(val: &Series) -> Series {
     println!("{:?}", recept_df);
 ```
 
-### P-063: 商品データ（df_product）の単価（unit_price）と原価（unit_cost）から各商品の利益額を算出し、結果を10件表示せよ。
+### P-063: 商品データ（df_product）の単価（unit_price）と原価（unit_cost）から各商品の利益額を算出し、結果を 10 件表示せよ。
+
 ```rust
 let product_df = LazyCsvReader::new(product_path)
         .has_header(true)
@@ -1790,6 +1799,7 @@ let product_df = LazyCsvReader::new(product_path)
 ```
 
 ### P-064: 商品データ（df_product）の単価（unit_price）と原価（unit_cost）から、各商品の利益率の全体平均を算出せよ。ただし、単価と原価には欠損が生じていることに注意せよ。
+
 ```rust
 let product_df = LazyCsvReader::new(product_path)
         .has_header(true)
@@ -1804,4 +1814,104 @@ let product_df = LazyCsvReader::new(product_path)
         .unwrap();
 
     println!("{}", product_df.get_columns()[0].get(0));
+```
+
+### P-065: 商品データ（df_product）の各商品について、利益率が 30%となる新たな単価を求めよ。ただし、1 円未満は切り捨てること。そして結果を 10 件表示させ、利益率がおよそ 30％付近であることを確認せよ。ただし、単価（unit_price）と原価（unit_cost）には欠損が生じていることに注意せよ。
+
+```rust
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("*").is_not_null())
+        .select([
+            col("*"),
+            ((col("unit_cost") / lit(0.7))
+                .cast(DataType::Float32)
+                .floor())
+            .alias("new_price"),
+        ])
+        .select([
+            col("*"),
+            ((col("new_price") - col("unit_cost")).cast(DataType::Float32) / col("new_price"))
+                .alias("new_price_rate"),
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", product_df);
+```
+
+### P-066: 商品データ（df_product）の各商品について、利益率が 30%となる新たな単価を求めよ。今回は、1 円未満を丸めること（四捨五入または偶数への丸めで良い）。そして結果を 10 件表示させ、利益率がおよそ 30％付近であることを確認せよ。ただし、単価（unit_price）と原価（unit_cost）には欠損が生じていることに注意せよ。
+
+```rust
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("*").is_not_null())
+        .select([
+            col("*"),
+            ((col("unit_cost") / lit(0.7))
+                .cast(DataType::Float32)
+                .round(0))
+            .alias("new_price"),
+        ])
+        .select([
+            col("*"),
+            ((col("new_price") - col("unit_cost")).cast(DataType::Float32) / col("new_price"))
+                .alias("new_price_rate"),
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", product_df);
+```
+
+### P-067: 商品データ（df_product）の各商品について、利益率が 30%となる新たな単価を求めよ。今回は、1 円未満を切り上げること。そして結果を 10 件表示させ、利益率がおよそ 30％付近であることを確認せよ。ただし、単価（unit_price）と原価（unit_cost）には欠損が生じていることに注意せよ。
+
+```rust
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("*").is_not_null())
+        .select([
+            col("*"),
+            ((col("unit_cost") / lit(0.7)).cast(DataType::Float32).ceil()).alias("new_price"),
+        ])
+        .select([
+            col("*"),
+            ((col("new_price") - col("unit_cost")).cast(DataType::Float32) / col("new_price"))
+                .alias("new_price_rate"),
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", product_df);
+```
+
+### P-068: 商品データ（df_product）の各商品について、消費税率 10％の税込み金額を求めよ。1 円未満の端数は切り捨てとし、結果を 10 件表示せよ。ただし、単価（unit_price）には欠損が生じていることに注意せよ。
+
+```rust
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("*").is_not_null())
+        .select([
+            col("*"),
+            ((col("unit_price") * lit(1.1))
+                .cast(DataType::Float32)
+                .floor())
+            .alias("tax_price"),
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", product_df);
 ```
