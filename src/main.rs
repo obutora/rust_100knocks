@@ -1,4 +1,4 @@
-use polars::{lazy::dsl::GetOutput, prelude::*};
+use polars::{lazy::dsl::GetOutput, prelude::*, export::num::ToPrimitive};
 
 fn main() {
 //     let recept_path = "100knocks-preprocess/docker/work/data/receipt.csv";
@@ -7,21 +7,19 @@ fn main() {
     // let product_path = "100knocks-preprocess/docker/work/data/product.csv";
     // let category_path = "100knocks-preprocess/docker/work/data/category.csv";
 
-    fn calc_era(age: &Series) -> Series {
-        age.i64()
+    fn to_dummy(val: &Series, code:i8) -> Series {
+        val.i64()
             .unwrap()
             .into_iter()
-            .map(|age| match age {
-                Some(age) => {
-                    let era = ((age as f64 / 10.0).floor()) * 10.0;
-
-                    if age > 60 {
-                        return 60f64
+            .map(|val| match val {
+                Some(val) => {
+                    if val == code.to_i64().unwrap() {
+                        return 1i64
                     } else {
-                        return era
+                        return 0i64
                     }
                 },
-                None => 0f64,
+                None => 0i64,
             })
             .collect()
     }
@@ -31,20 +29,17 @@ fn main() {
         .has_header(true)
         .finish()
         .unwrap()
-        .with_column(col("age")
-        .map(|s| Ok(calc_era(&s)), GetOutput::default())
-                .alias("era"),
-            )
+        .with_columns([
+            col("gender_cd").map(|s| Ok(to_dummy(&s, 0)), GetOutput::default()).alias("gender_0"),
+            col("gender_cd").map(|s| Ok(to_dummy(&s, 1)), GetOutput::default()).alias("gender_1"),
+            col("gender_cd").map(|s| Ok(to_dummy(&s, 9)), GetOutput::default()).alias("gender_9"),
+        ])
         .select([
             col("customer_id"),
             col("gender_cd"),//本来指定なかったが、検証に便利なので入れている
-            col("birth_day"),
-            col("age"), //本来指定なかったが、検証に便利なので入れている
-            col("era"),
-            fold_exprs(lit(0), |a, b| Ok(&a + &b), [
-                col("gender_cd"),
-                col("era")
-            ]).alias("gender_era")
+            col("gender_0"),
+            col("gender_1"),
+            col("gender_9"),
         ])
         .collect()
         .unwrap()
