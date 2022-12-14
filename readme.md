@@ -1730,3 +1730,44 @@ fn to_log(val: &Series) -> Series {
 
     println!("{:?}", recept_df);
 ```
+
+### P-062: レシート明細データ（df_receipt）の売上金額（amount）を顧客ID（customer_id）ごとに合計し、売上金額合計を自然対数化（底e）して顧客ID、売上金額合計とともに10件表示せよ。ただし、顧客IDが"Z"から始まるのものは非会員を表すため、除外して計算すること。
+```rust
+fn to_ln(val: &Series) -> Series {
+        val.i64()
+            .unwrap()
+            .into_iter()
+            .map(|val| match val {
+                Some(val) => (val as f64).ln(),
+                None => 0f64,
+            })
+            .collect()
+    }
+
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("customer_id").str().contains("^[A-Y]"))
+        .groupby([col("customer_id")])
+        .agg([
+            col("amount").sum().alias("amount"),
+        ])
+        .with_column(
+            col("amount")
+            .map(|s| Ok(to_ln(&s)), GetOutput::default())
+                .alias("log"),
+        )
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", recept_df);
+```

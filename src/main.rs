@@ -12,7 +12,7 @@ fn main() {
             .unwrap()
             .into_iter()
             .map(|val| match val {
-                Some(val) => (val as f64).log10(),
+                Some(val) => (val as f64).ln(),
                 None => 0f64,
             })
             .collect()
@@ -40,7 +40,8 @@ fn main() {
             },
         )
         .collect()
-        .unwrap();
+        .unwrap()
+        .head(Some(10));
 
     println!("{:?}", recept_df);
 }
