@@ -1,47 +1,61 @@
-use polars::prelude::*;
+use polars::{lazy::dsl::GetOutput, prelude::*};
 
 fn main() {
     let recept_path = "100knocks-preprocess/docker/work/data/receipt.csv";
     // let store_path = "100knocks-preprocess/docker/work/data/store.csv";
-    // let customer_path = "100knocks-preprocess/docker/work/data/customer.csv";
-    let product_path = "100knocks-preprocess/docker/work/data/product.csv";
+    let customer_path = "100knocks-preprocess/docker/work/data/customer.csv";
+    // let product_path = "100knocks-preprocess/docker/work/data/product.csv";
     // let category_path = "100knocks-preprocess/docker/work/data/category.csv";
+
+    fn to_year(s: &Series) -> Series {
+        s.duration()
+            .unwrap()
+            .into_iter()
+            .map(|date| match date {
+                Some(date) => date / 31_556_952_000, // ms to year
+                None => 0,
+            })
+            .collect()
+    }
 
     let recept_df = LazyCsvReader::new(recept_path)
         .has_header(true)
         .finish()
-        .unwrap();
+        .unwrap()
+        .select([col("customer_id"), col("sales_ymd")]);
 
-    let product_df = LazyCsvReader::new(product_path)
+    let customer_df = LazyCsvReader::new(customer_path)
         .has_header(true)
         .finish()
-        .unwrap();
+        .unwrap()
+        .select([col("customer_id"), col("application_date")]);
 
     let joined = recept_df
-        .inner_join(product_df, "product_cd", "product_cd")
-        .select([col("customer_id"), col("category_major_cd"), col("amount")])
-        .with_column(
-            when(col("category_major_cd").eq(7))
-                .then(col("amount"))
-                .otherwise(0)
-                .alias("7_amount"),
-        )
-        .groupby([col("customer_id")])
-        .agg([
-            col("amount").sum().alias("total_amount"),
-            col("7_amount").sum().alias("7_amount"),
-        ])
+        .inner_join(customer_df, "customer_id", "customer_id")
+        .unique(None, UniqueKeepStrategy::First)
         .select([
-            col("*"),
-            (col("7_amount").cast(DataType::Float64) / col("total_amount")).alias("sales_rate"),
+            col("customer_id"),
+            (col("sales_ymd").cast(DataType::Utf8))
+                .str()
+                .strptime(StrpTimeOptions {
+                    fmt: Some("%Y%m%d".to_string()),
+                    date_dtype: DataType::Date,
+                    ..Default::default()
+                }),
+            (col("application_date").cast(DataType::Utf8))
+                .str()
+                .strptime(StrpTimeOptions {
+                    fmt: Some("%Y%m%d".to_string()),
+                    date_dtype: DataType::Date,
+                    ..Default::default()
+                }),
         ])
-        .sort(
-            "customer_id",
-            SortOptions {
-                descending: (false),
-                nulls_last: (true),
-            },
+        .with_column(
+            ((col("sales_ymd") - col("application_date"))
+                .map(|s| Ok(to_year(&s)), GetOutput::default()))
+            .alias("diff"),
         )
+        .filter(col("customer_id").str().contains("CS006214000001"))
         .collect()
         .unwrap()
         .head(Some(10));

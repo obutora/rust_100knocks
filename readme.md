@@ -1960,3 +1960,104 @@ let recept_df = LazyCsvReader::new(recept_path)
 
     println!("{:?}", joined);
 ```
+
+### P-070: レシート明細データ（df_receipt）の売上日（sales_ymd）に対し、顧客データ（df_customer）の会員申込日（application_date）からの経過日数を計算し、顧客 ID（customer_id）、売上日、会員申込日とともに 10 件表示せよ（sales_ymd は数値、application_date は文字列でデータを保持している点に注意）。
+
+```rust
+let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([col("customer_id"), col("sales_ymd")]);
+
+    let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([col("customer_id"), col("application_date")]);
+
+    let joined = recept_df
+        .inner_join(customer_df, "customer_id", "customer_id")
+        .select([
+            col("customer_id"),
+            (col("sales_ymd").cast(DataType::Utf8))
+                .str()
+                .strptime(StrpTimeOptions {
+                    fmt: Some("%Y%m%d".to_string()),
+                    date_dtype: DataType::Date,
+                    ..Default::default()
+                }),
+            (col("application_date").cast(DataType::Utf8))
+                .str()
+                .strptime(StrpTimeOptions {
+                    fmt: Some("%Y%m%d".to_string()),
+                    date_dtype: DataType::Date,
+                    ..Default::default()
+                }),
+        ])
+        .with_column((col("sales_ymd") - col("application_date")).alias("diff"))
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", joined);
+```
+
+### P-071: レシート明細データ（df_receipt）の売上日（sales_ymd）に対し、顧客データ（df_customer）の会員申込日（application_date）からの経過月数を計算し、顧客 ID（customer_id）、売上日、会員申込日とともに 10 件表示せよ（sales_ymd は数値、application_date は文字列でデータを保持している点に注意）。1 ヶ月未満は切り捨てること。
+
+```rust
+fn to_month(s: &Series) -> Series {
+        s.duration()
+            .unwrap()
+            .into_iter()
+            .map(|date| match date {
+                Some(date) => date / 2_629_746_000, // ms to month
+                None => 0,
+            })
+            .collect()
+    }
+
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([col("customer_id"), col("sales_ymd")]);
+
+    let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([col("customer_id"), col("application_date")]);
+
+    let joined = recept_df
+        .inner_join(customer_df, "customer_id", "customer_id")
+        .unique(None, UniqueKeepStrategy::First)
+        .select([
+            col("customer_id"),
+            (col("sales_ymd").cast(DataType::Utf8))
+                .str()
+                .strptime(StrpTimeOptions {
+                    fmt: Some("%Y%m%d".to_string()),
+                    date_dtype: DataType::Date,
+                    ..Default::default()
+                }),
+            (col("application_date").cast(DataType::Utf8))
+                .str()
+                .strptime(StrpTimeOptions {
+                    fmt: Some("%Y%m%d".to_string()),
+                    date_dtype: DataType::Date,
+                    ..Default::default()
+                }),
+        ])
+        .with_column(
+            ((col("sales_ymd") - col("application_date"))
+                .map(|s| Ok(to_month(&s)), GetOutput::default()))
+            .alias("diff"),
+        )
+        .filter(col("customer_id").str().contains("CS006214000001")) //PythonのAnswerと同じ結果を出すために便宜的に追加。題意には含まれない。
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", joined);
+```
