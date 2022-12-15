@@ -2384,3 +2384,25 @@ let product_df = LazyCsvReader::new(product_path)
     println!("削除前 : {}", pre_count);
     println!("削除後 : {}", pro_count);
 ```
+
+### P-081: 単価（unit_price）と原価（unit_cost）の欠損値について、それぞれの平均値で補完した新たな商品データを作成せよ。なお、平均値については 1 円未満を丸めること（四捨五入または偶数への丸めで良い）。補完実施後、各項目について欠損が生じていないことも確認すること。
+
+```rust
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .with_columns([col("*").is_null().alias("flag")])
+        .collect()
+        .unwrap()
+        .fill_null(FillNullStrategy::Mean)
+        .unwrap()
+        .lazy()
+        .filter(col("flag").eq(lit(true)))
+        .collect()
+        .unwrap();
+
+    println!("{:?}", product_df);
+```
+
+### P-082: 単価（unit_price）と原価（unit_cost）の欠損値について、それぞれの中央値で補完した新たな商品データを作成せよ。なお、中央値については 1 円未満を丸めること（四捨五入または偶数への丸めで良い）。補完実施後、各項目について欠損が生じていないことも確認すること。
