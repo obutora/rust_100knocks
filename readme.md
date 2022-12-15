@@ -2206,3 +2206,52 @@ fn to_weekdays(s: &Series) -> Series {
 
     println!("{:?}", sample);
 ```
+
+### P-076: 顧客データ（df_customer）から性別コード（gender_cd）の割合に基づきランダムに 10%のデータを層化抽出し、性別コードごとに件数を集計せよ。
+
+```rust
+let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let male_df = customer_df.clone().filter(col("gender_cd").eq(0));
+    let female_df = customer_df.clone().filter(col("gender_cd").eq(1));
+    let unknown_df = customer_df.clone().filter(col("gender_cd").eq(9));
+
+    let male_count = male_df.clone().collect().unwrap().height() / 10;
+    let female_count = female_df.clone().collect().unwrap().height() / 10;
+    let unknown_count = unknown_df.clone().collect().unwrap().height() / 10;
+
+    let male_sample = male_df
+        .collect()
+        .unwrap()
+        .sample_n(male_count, true, true, None)
+        .unwrap()
+        .lazy();
+
+    let female_sample = female_df
+        .collect()
+        .unwrap()
+        .sample_n(female_count, true, true, None)
+        .unwrap()
+        .lazy();
+
+    let unknown_sample = unknown_df
+        .collect()
+        .unwrap()
+        .sample_n(unknown_count, true, true, None)
+        .unwrap()
+        .lazy();
+
+    let sample = concat([male_sample, female_sample, unknown_sample], true, true)
+        .unwrap()
+        .groupby([col("gender_cd")])
+        .agg([col("gender_cd").count().alias("count")])
+        .collect()
+        .unwrap();
+    //
+    println!("{:?}", sample);
+```
+
+### P-077: レシート明細データ（df_receipt）の売上金額を顧客単位に合計し、合計した売上金額の外れ値を抽出せよ。なお、外れ値は売上金額合計を対数化したうえで平均と標準偏差を計算し、その平均から 3σ を超えて離れたものとする（自然対数と常用対数のどちらでも可）。結果は 10 件表示せよ。
