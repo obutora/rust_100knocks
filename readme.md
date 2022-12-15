@@ -2362,6 +2362,25 @@ let product_df = LazyCsvReader::new(product_path)
         .filter(col("flag").eq(lit(true)))
         .sum()
         .collect()
+        .unwrap();
+```
+
+### P-080: 商品データ（df_product）のいずれかの項目に欠損が発生しているレコードを全て削除した新たな商品データを作成せよ。なお、削除前後の件数を表示させ、079 で確認した件数だけ減少していることも確認すること。
+
+```rust
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
         .unwrap()
-        .head(Some(10));
+        .with_columns([col("*").is_null().alias("flag")])
+        .collect()
+        .unwrap();
+
+    let pre_count = &product_df.shape().0;
+
+    let product_df = product_df.drop_nulls(None).unwrap();
+    let pro_count = &product_df.shape().0;
+
+    println!("削除前 : {}", pre_count);
+    println!("削除後 : {}", pro_count);
 ```

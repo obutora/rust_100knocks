@@ -12,11 +12,14 @@ fn main() {
         .finish()
         .unwrap()
         .with_columns([col("*").is_null().alias("flag")])
-        .filter(col("flag").eq(lit(true)))
-        .sum()
         .collect()
         .unwrap()
-        .head(Some(10));
+        .fill_null(FillNullStrategy::Mean)
+        .unwrap()
+        .lazy()
+        .filter(col("flag").eq(lit(true)))
+        .collect()
+        .unwrap();
 
     println!("{:?}", product_df);
 }
