@@ -2122,3 +2122,68 @@ fn to_epoch(s: &Series) -> Series {
 
     println!("{:?}", joined);
 ```
+
+### P-074: レシート明細データ（df_receipt）の売上日（sales_ymd）に対し、当該週の月曜日からの経過日数を計算し、売上日、直前の月曜日付とともに 10 件表示せよ（sales_ymd は数値でデータを保持している点に注意）。
+
+```rust
+fn to_weekdays(s: &Series) -> Series {
+        s.datetime()
+            .unwrap()
+            .into_iter()
+            .map(|date| match date {
+                Some(date) => Utc
+                    .timestamp_millis_opt(date as i64)
+                    .unwrap()
+                    .weekday()
+                    .num_days_from_monday(),
+                None => 0u32,
+            })
+            .collect()
+    }
+
+    fn to_date_string(s: &Series) -> Series {
+        s.i64()
+            .unwrap()
+            .into_iter()
+            .map(|date| match date {
+                Some(date) => Utc
+                    .timestamp_millis_opt(date as i64)
+                    .unwrap()
+                    .date_naive()
+                    .format("%Y-%m-%d")
+                    .to_string(),
+                None => "".to_string(),
+            })
+            .collect()
+    }
+
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([(col("sales_ymd").cast(DataType::Utf8))
+            .str()
+            .strptime(StrpTimeOptions {
+                fmt: Some("%Y%m%d".to_string()),
+                date_dtype: DataType::Date,
+                ..Default::default()
+            })])
+        .with_column(
+            col("sales_ymd")
+                .cast(DataType::Datetime(TimeUnit::Milliseconds, None))
+                .map(|s| Ok(to_weekdays(&s)), GetOutput::default())
+                .alias("weekdays"),
+        )
+        .with_column((col("weekdays") * lit(86400000)).alias("weekdays_millis"))
+        .with_column(
+            (col("sales_ymd").cast(DataType::Datetime(TimeUnit::Milliseconds, None))
+                - col("weekdays_millis"))
+            .map(|s| Ok(to_date_string(&s)), GetOutput::default())
+            .alias("monday"),
+        )
+        .select([col("*").exclude(["weekdays_millis"])])
+        .collect()
+        .unwrap();
+
+    println!("{:?}", recept_df);
+```
