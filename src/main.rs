@@ -7,49 +7,49 @@ fn main() {
     // let product_path = "100knocks-preprocess/docker/work/data/product.csv";
     // let category_path = "100knocks-preprocess/docker/work/data/category.csv";
 
-    fn to_log(val: &Series) -> Series {
-        val.i64()
-            .unwrap()
-            .into_iter()
-            .map(|val| match val {
-                Some(val) => (val as f64).log10(),
-                None => 0f64,
-            })
-            .collect()
-    }
+    // col("amount")
+    //             .quantile(0.25f64, QuantileInterpolOptions::Nearest)
+    //             .alias("q1"),
 
     let recept_df = LazyCsvReader::new(recept_path)
         .has_header(true)
         .finish()
         .unwrap()
+        .filter(col("customer_id").str().contains("^[A-Y]"))
         .groupby([col("customer_id")])
-        .agg([col("amount")
-            .sum()
-            .map(|s| Ok(to_log(&s)), GetOutput::default())
-            .alias("amount_log")])
+        .agg([col("amount").sum().alias("amount")])
         .with_columns([
-            col("amount_log").mean().alias("mean"),
-            col("amount_log").std(0).alias("std"),
+            col("amount")
+                .quantile(0.25f64, QuantileInterpolOptions::Nearest)
+                .alias("q1"),
+            col("amount")
+                .quantile(0.75f64, QuantileInterpolOptions::Nearest)
+                .alias("q3"),
+        ])
+        .with_column((col("q3") - col("q1")).alias("iqr"))
+        .with_columns([
+            (col("q1") - (col("iqr") * lit(1.5))).alias("lower"),
+            (col("q3") + (col("iqr") * lit(1.5))).alias("upper"),
         ])
         .with_columns([
-            (col("mean") - (col("std") * lit(3))).alias("minus_3_sigma"),
-            (col("mean") + (col("std") * lit(3))).alias("up_3_sigma"),
-        ])
-        .with_columns([
-            col("amount_log")
-                .lt(col("minus_3_sigma"))
-                .alias("minus_flag"),
-            col("amount_log").gt(col("up_3_sigma")).alias("up_flag"),
+            col("amount").lt(col("lower")).alias("lower_flag"),
+            col("amount").gt(col("upper")).alias("upeer_flag"),
         ])
         .filter(
-            col("minus_flag")
+            col("lower_flag")
                 .eq(lit(true))
-                .or(col("up_flag").eq(lit(true))),
+                .or(col("upeer_flag").eq(lit(true))),
+        )
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false), //高齢順にソート とは、誕生日を昇順にソートすること
+                nulls_last: (true),
+            },
         )
         .collect()
         .unwrap()
         .head(Some(10));
 
-    //
     println!("{:?}", recept_df);
 }

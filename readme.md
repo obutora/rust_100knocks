@@ -2304,3 +2304,55 @@ fn to_log(val: &Series) -> Series {
     println!("{:?}", recept_df);
 
 ```
+
+### P-078: レシート明細データ（df_receipt）の売上金額（amount）を顧客単位に合計し、合計した売上金額の外れ値を抽出せよ。ただし、顧客 ID が"Z"から始まるのものは非会員を表すため、除外して計算すること。なお、ここでは外れ値を第 1 四分位と第 3 四分位の差である IQR を用いて、「第 1 四分位数-1.5×IQR」を下回るもの、または「第 3 四分位数+1.5×IQR」を超えるものとする。結果は 10 件表示せよ。
+
+```rust
+ let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .filter(col("customer_id").str().contains("^[A-Y]"))
+        .groupby([col("customer_id")])
+        .agg([col("amount").sum().alias("amount")])
+        .with_columns([
+            col("amount")
+                .quantile(0.25f64, QuantileInterpolOptions::Nearest)
+                .alias("q1"),
+            col("amount")
+                .quantile(0.75f64, QuantileInterpolOptions::Nearest)
+                .alias("q3"),
+        ])
+        .with_column((col("q3") - col("q1")).alias("iqr"))
+        .with_columns([
+            (col("q1") - (col("iqr") * lit(1.5))).alias("lower"),
+            (col("q3") + (col("iqr") * lit(1.5))).alias("upper"),
+        ])
+        .with_columns([
+            col("amount").lt(col("lower")).alias("lower_flag"),
+            col("amount").gt(col("upper")).alias("upeer_flag"),
+        ])
+        .filter(
+            col("lower_flag")
+                .eq(lit(true))
+                .or(col("upeer_flag").eq(lit(true))),
+        )
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false), //高齢順にソート とは、誕生日を昇順にソートすること
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", recept_df);
+```
+
+### P-079: 商品データ（df_product）の各項目に対し、欠損数を確認せよ。
+
+```rust
+
+```
