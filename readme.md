@@ -2354,5 +2354,14 @@ fn to_log(val: &Series) -> Series {
 ### P-079: 商品データ（df_product）の各項目に対し、欠損数を確認せよ。
 
 ```rust
-
+let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .with_columns([col("*").is_null().alias("flag")])
+        .filter(col("flag").eq(lit(true)))
+        .sum()
+        .collect()
+        .unwrap()
+        .head(Some(10));
 ```
