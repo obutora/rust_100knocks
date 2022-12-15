@@ -2187,3 +2187,22 @@ fn to_weekdays(s: &Series) -> Series {
 
     println!("{:?}", recept_df);
 ```
+
+### P-075: 顧客データ（df_customer）からランダムに 1%のデータを抽出し、先頭から 10 件表示せよ。
+
+```rust
+ let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .collect()
+        .unwrap();
+
+    let count = customer_df.height(); //count
+
+    let sample = customer_df
+        .sample_n((count / 100) as usize, true, true, None)
+        .unwrap();
+
+    println!("{:?}", sample);
+```
