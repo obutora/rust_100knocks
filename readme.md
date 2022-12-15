@@ -2255,3 +2255,52 @@ let customer_df = LazyCsvReader::new(customer_path)
 ```
 
 ### P-077: レシート明細データ（df_receipt）の売上金額を顧客単位に合計し、合計した売上金額の外れ値を抽出せよ。なお、外れ値は売上金額合計を対数化したうえで平均と標準偏差を計算し、その平均から 3σ を超えて離れたものとする（自然対数と常用対数のどちらでも可）。結果は 10 件表示せよ。
+
+```rust
+fn to_log(val: &Series) -> Series {
+        val.i64()
+            .unwrap()
+            .into_iter()
+            .map(|val| match val {
+                Some(val) => (val as f64).log10(),
+                None => 0f64,
+            })
+            .collect()
+    }
+
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("customer_id")])
+        .agg([col("amount")
+            .sum()
+            .map(|s| Ok(to_log(&s)), GetOutput::default())
+            .alias("amount_log")])
+        .with_columns([
+            col("amount_log").mean().alias("mean"),
+            col("amount_log").std(0).alias("std"),
+        ])
+        .with_columns([
+            (col("mean") - (col("std") * lit(3))).alias("minus_3_sigma"),
+            (col("mean") + (col("std") * lit(3))).alias("up_3_sigma"),
+        ])
+        .with_columns([
+            col("amount_log")
+                .lt(col("minus_3_sigma"))
+                .alias("minus_flag"),
+            col("amount_log").gt(col("up_3_sigma")).alias("up_flag"),
+        ])
+        .filter(
+            col("minus_flag")
+                .eq(lit(true))
+                .or(col("up_flag").eq(lit(true))),
+        )
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    //
+    println!("{:?}", recept_df);
+
+```
