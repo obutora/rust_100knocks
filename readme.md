@@ -2494,3 +2494,29 @@ let customer_df = LazyCsvReader::new(customer_path)
     println!("{:?}", result.collect().unwrap());
     println!("{}", null_df.collect().unwrap());
 ```
+
+### P-085: 顧客データ（df_customer）の全顧客に対し、郵便番号（postal_cd）を用いてジオコードデータ（df_geocode）を紐付け、新たな顧客データを作成せよ。ただし、1つの郵便番号（postal_cd）に複数の経度（longitude）、緯度（latitude）情報が紐づく場合は、経度（longitude）、緯度（latitude）の平均値を算出して使用すること。また、作成結果を確認するために結果を10件表示せよ。
+
+```rust
+let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+    
+    let geocode_df = LazyCsvReader::new(geocode_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("postal_cd")])
+        .agg([
+            col("longitude").mean().alias("m_lng"),
+            col("latitude").mean().alias("m_lat")
+            ]);
+
+    let joined = customer_df.inner_join(geocode_df, col("postal_cd"), col("postal_cd"))
+        .collect()
+        .unwrap()
+        .head(Some(10));
+    
+    println!("{:?}", joined);
+```
