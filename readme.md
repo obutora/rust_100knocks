@@ -2406,3 +2406,41 @@ let product_df = LazyCsvReader::new(product_path)
 ```
 
 ### P-082: 単価（unit_price）と原価（unit_cost）の欠損値について、それぞれの中央値で補完した新たな商品データを作成せよ。なお、中央値については 1 円未満を丸めること（四捨五入または偶数への丸めで良い）。補完実施後、各項目について欠損が生じていないことも確認すること。
+```rust
+let std_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("category_small_cd")])
+        .agg([
+            col("unit_price").std(0).alias("std_price"),
+            col("unit_cost").std(0).alias("std_cost")
+        ]);
+
+    let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .with_columns([
+            col("unit_price").is_null().alias("price_flag"),
+            col("unit_cost").is_null().alias("cost_flag"),
+        ]);
+
+    let joined = product_df.inner_join(std_df, col("category_small_cd"), col("category_small_cd"))
+        .with_columns([
+            when(col("price_flag").eq(lit(true))).then(col("std_price")).otherwise(col("unit_price")).alias("unit_price"),
+            when(col("cost_flag").eq(lit(true))).then(col("std_cost")).otherwise(col("unit_cost")).alias("unit_cost"),
+        ])
+        .select([
+            col("product_cd"),
+            col("category_major_cd"),
+            col("unit_price"),
+            col("price_flag"),
+            col("std_price"),
+        ])
+        // .filter(col("price_flag").eq(lit(true))) //フラグが立っているところが中央値になっているか確認用
+        .collect()
+        .unwrap();
+    
+    println!("{:?}", joined);
+```
