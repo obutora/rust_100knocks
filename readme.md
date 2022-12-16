@@ -412,6 +412,7 @@ let df = LazyCsvReader::new(customer_path)
     println!("{:?}", df);
 ```
 
+//TODO
 ### P-019: レシート明細データ（df_receipt）に対し、1 件あたりの売上金額（amount）が高い順にランクを付与し、先頭から 10 件表示せよ。項目は顧客 ID（customer_id）、売上金額（amount）、付与したランクを表示させること。なお、売上金額（amount）が等しい場合は同一順位を付与するものとする。
 
 ### P-020: レシート明細データ（df_receipt）に対し、1 件あたりの売上金額（amount）が高い順にランクを付与し、先頭から 10 件表示せよ。項目は顧客 ID（customer_id）、売上金額（amount）、付与したランクを表示させること。なお、売上金額（amount）が等しい場合でも別順位を付与すること。
@@ -2443,4 +2444,53 @@ let std_df = LazyCsvReader::new(product_path)
         .unwrap();
     
     println!("{:?}", joined);
+```
+
+### P-084: 顧客データ（df_customer）の全顧客に対して全期間の売上金額に占める2019年売上金額の割合を計算し、新たなデータを作成せよ。ただし、売上実績がない場合は0として扱うこと。そして計算した割合が0超のものを抽出し、結果を10件表示せよ。また、作成したデータに欠損が存在しないことを確認せよ。
+```rust
+let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+    
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+    
+    
+    let joined = customer_df.left_join(recept_df, col("customer_id"), col("customer_id"))
+        .fill_null(lit(0))
+        .with_column(
+            when(col("sales_ymd")
+                .gt(lit(20190000))
+                .and(col("sales_ymd").lt(lit(20199999)))
+            ).then(col("amount")).otherwise(lit(0)).alias("2019_sales")
+        )
+        .groupby([col("customer_id")])
+        .agg([
+            col("amount").sum().alias("total_sum"),
+            col("2019_sales").sum().alias("2019_sum")
+            ]);
+    
+    let zero_df = joined.clone()
+        .filter(col("2019_sum").eq(lit(0)))
+        .with_column(
+            lit(0f64).alias("2019_rate")
+        );
+
+    let non_zero_df = joined.clone()
+        .filter(col("2019_sum").neq(lit(0)))
+        .with_column(
+            (col("2019_sum").cast(DataType::Float64) / col("total_sum")).alias("2019_rate")
+        );
+
+    let result = concat([zero_df, non_zero_df],true, true)
+    .unwrap();
+
+    let null_df = result.clone()
+        .filter(col("*").is_null());
+
+    println!("{:?}", result.collect().unwrap());
+    println!("{}", null_df.collect().unwrap());
 ```

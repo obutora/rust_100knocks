@@ -1,46 +1,55 @@
 use polars::{prelude::*, lazy::dsl::when};
 
 fn main() {
-    // let recept_path = "100knocks-preprocess/docker/work/data/receipt.csv";
+    let recept_path = "100knocks-preprocess/docker/work/data/receipt.csv";
     // let store_path = "100knocks-preprocess/docker/work/data/store.csv";
-    // let customer_path = "100knocks-preprocess/docker/work/data/customer.csv";
-    let product_path = "100knocks-preprocess/docker/work/data/product.csv";
+    let customer_path = "100knocks-preprocess/docker/work/data/customer.csv";
+    // let product_path = "100knocks-preprocess/docker/work/data/product.csv";
     // let category_path = "100knocks-preprocess/docker/work/data/category.csv";
 
-    let std_df = LazyCsvReader::new(product_path)
+    let customer_df = LazyCsvReader::new(customer_path)
         .has_header(true)
         .finish()
-        .unwrap()
-        .groupby([col("category_small_cd")])
-        .agg([
-            col("unit_price").std(0).alias("std_price"),
-            col("unit_cost").std(0).alias("std_cost")
-        ]);
-
-    let product_df = LazyCsvReader::new(product_path)
-        .has_header(true)
-        .finish()
-        .unwrap()
-        .with_columns([
-            col("unit_price").is_null().alias("price_flag"),
-            col("unit_cost").is_null().alias("cost_flag"),
-        ]);
-
-    let joined = product_df.inner_join(std_df, col("category_small_cd"), col("category_small_cd"))
-        .with_columns([
-            when(col("price_flag").eq(lit(true))).then(col("std_price")).otherwise(col("unit_price")).alias("unit_price"),
-            when(col("cost_flag").eq(lit(true))).then(col("std_cost")).otherwise(col("unit_cost")).alias("unit_cost"),
-        ])
-        .select([
-            col("product_cd"),
-            col("category_major_cd"),
-            col("unit_price"),
-            col("price_flag"),
-            col("std_price"),
-        ])
-        // .filter(col("price_flag").eq(lit(true))) //フラグが立っているところが中央値になっているか確認用
-        .collect()
         .unwrap();
     
-    println!("{:?}", joined);
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+    
+    
+    let joined = customer_df.left_join(recept_df, col("customer_id"), col("customer_id"))
+        .fill_null(lit(0))
+        .with_column(
+            when(col("sales_ymd")
+                .gt(lit(20190000))
+                .and(col("sales_ymd").lt(lit(20199999)))
+            ).then(col("amount")).otherwise(lit(0)).alias("2019_sales")
+        )
+        .groupby([col("customer_id")])
+        .agg([
+            col("amount").sum().alias("total_sum"),
+            col("2019_sales").sum().alias("2019_sum")
+            ]);
+    
+    let zero_df = joined.clone()
+        .filter(col("2019_sum").eq(lit(0)))
+        .with_column(
+            lit(0f64).alias("2019_rate")
+        );
+
+    let non_zero_df = joined.clone()
+        .filter(col("2019_sum").neq(lit(0)))
+        .with_column(
+            (col("2019_sum").cast(DataType::Float64) / col("total_sum")).alias("2019_rate")
+        );
+
+    let result = concat([zero_df, non_zero_df],true, true)
+    .unwrap();
+
+    let null_df = result.clone()
+        .filter(col("*").is_null());
+
+    println!("{:?}", result.collect().unwrap());
+    println!("{}", null_df.collect().unwrap());
 }
