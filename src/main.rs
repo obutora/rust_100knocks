@@ -1,7 +1,7 @@
 use polars::prelude::*;
 
 fn main() {
-    let recept_path = "100knocks-preprocess/docker/work/data/receipt.csv";
+    // let recept_path = "100knocks-preprocess/docker/work/data/receipt.csv";
     // let store_path = "100knocks-preprocess/docker/work/data/store.csv";
     let customer_path = "100knocks-preprocess/docker/work/data/customer.csv";
     // let product_path = "100knocks-preprocess/docker/work/data/product.csv";
@@ -11,37 +11,16 @@ fn main() {
     let customer_df = LazyCsvReader::new(customer_path)
     .has_header(true)
     .finish()
-    .unwrap();
-
-    let recept_df = LazyCsvReader::new(recept_path)
-    .has_header(true)
-    .finish()
     .unwrap()
-    .groupby([col("customer_id")])
-    .agg([col("amount").sum().alias("amount")]);
-
-    let joined = customer_df.left_join(recept_df, col("customer_id"), col("customer_id"))
     .select([
-        col("*").exclude(["amount"]),
-        col("amount").fill_null(lit(0)).alias("amount")
-    ]);
-
-    let non_zero_df = joined.clone().filter(col("amount").gt(0))
-    .collect().unwrap();
-
-    let zero_df = joined.filter(col("amount").eq(0))
-    .collect().unwrap();
-
-    println!("non-zero :{:?}", non_zero_df.shape()); //zero_dfよりすくないので、こっちに合わせる
-    println!("zero : {:?}", zero_df.shape());
-
-    let zero_df = zero_df
-        .sample_n(non_zero_df.shape().0, false, true, None).unwrap();
-
-    println!("picked zero : {:?}", zero_df.shape());
-
+        col("gender_cd"),
+        col("gender")
+    ])
+    // .unique(Some(["gender_cd", "gender"]), UniqueKeepStrategy::First)
+    .collect()
+    .unwrap();
     
-    // println!("{:?}", joined.collect().unwrap());
+    println!("{:?}", customer_df);
     
 }
 
