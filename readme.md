@@ -152,34 +152,23 @@ println!("{:?}", df);
 > 売上金額（amount）が 1,000 以上または売上数量（quantity）が 5 以上
 
 ```rust
-//TODO filter で複数条件を指定する方法がわからないので、
-// 各条件でフィルターかけてから結合する方法をとった。
-// もっといい方法があれば教えてください。。。
 let df = LazyCsvReader::new(recept_path)
-    .has_header(true)
-    .finish()
-    .unwrap()
-    .select([
-        col("sales_ymd"),
-        col("customer_id"),
-        col("product_cd"),
-        col("quantity"),
-        col("amount"),
-    ]);
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("sales_ymd"),
+            col("customer_id"),
+            col("product_cd"),
+            col("quantity"),
+            col("amount"),
+        ])
+        .filter(col("customer_id").str().contains("CS018205000001"))
+        .filter(col("amount").gt(1000).or(col("quantity").gt_eq(5)))
+        .collect()
+        .unwrap();
 
-let df1 = df
-    .clone()
-    .filter(col("customer_id").str().contains("CS018205000001"))
-    .filter(col("amount").gt(1000));
-
-let df2 = df
-    .clone()
-    .filter(col("customer_id").str().contains("CS018205000001"))
-    .filter(col("quantity").gt_eq(5));
-
-let concat_df = concat([df1, df2], true, true).unwrap();
-
-println!("{:?}", concat_df.collect().unwrap());
+    println!("{:?}", df);
 ```
 
 ### P-007: レシート明細データ（df_receipt）から売上日（sales_ymd）、顧客 ID（customer_id）、商品コード（product_cd）、売上金額（amount）の順に列を指定し、以下の全ての条件を満たすデータを抽出せよ。
@@ -412,11 +401,63 @@ let df = LazyCsvReader::new(customer_path)
     println!("{:?}", df);
 ```
 
-//TODO
-
 ### P-019: レシート明細データ（df_receipt）に対し、1 件あたりの売上金額（amount）が高い順にランクを付与し、先頭から 10 件表示せよ。項目は顧客 ID（customer_id）、売上金額（amount）、付与したランクを表示させること。なお、売上金額（amount）が等しい場合は同一順位を付与するものとする。
 
+```rust
+let mut df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            all(),
+            col("amount")
+                .rank(RankOptions {
+                    method: RankMethod::Min,
+                    descending: true,
+                })
+                .alias("rank"),
+        ])
+        .sort(
+            "rank",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", df);
+```
+
 ### P-020: レシート明細データ（df_receipt）に対し、1 件あたりの売上金額（amount）が高い順にランクを付与し、先頭から 10 件表示せよ。項目は顧客 ID（customer_id）、売上金額（amount）、付与したランクを表示させること。なお、売上金額（amount）が等しい場合でも別順位を付与すること。
+
+```rust
+let mut df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            all(),
+            col("amount")
+                .rank(RankOptions {
+                    method: RankMethod::Ordinal,
+                    descending: true,
+                })
+                .alias("rank"),
+        ])
+        .sort(
+            "rank",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", df);
+```
 
 ### P-021: レシート明細データ（df_receipt）に対し、件数をカウントせよ。
 
@@ -1699,7 +1740,7 @@ let recept_df = LazyCsvReader::new(recept_path)
 
 ### P-060: レシート明細データ（df_receipt）の売上金額（amount）を顧客 ID（customer_id）ごとに合計し、売上金額合計を最小値 0、最大値 1 に正規化して顧客 ID、売上金額合計とともに 10 件表示せよ。ただし、顧客 ID が"Z"から始まるのものは非会員を表すため、除外して計算すること。
 
-//TODO: normalization を見つけられず、1 から実装するのも趣旨と異なる気がしたので一旦保留
+//TODO: normalization を見つけられず、1 から実装するのも趣旨と異なるので今回は一旦保留
 
 ### P-061: レシート明細データ（df_receipt）の売上金額（amount）を顧客 ID（customer_id）ごとに合計し、売上金額合計を常用対数化（底 10）して顧客 ID、売上金額合計とともに 10 件表示せよ。ただし、顧客 ID が"Z"から始まるのものは非会員を表すため、除外して計算すること。
 
@@ -2785,4 +2826,96 @@ let zero_df = zero_df
     .sample_n(non_zero_df.shape().0, false, true, None).unwrap();
 
 println!("picked zero : {:?}", zero_df.shape());
+```
+
+### P-092: 顧客データ（df_customer）の性別について、第三正規形へと正規化せよ。
+
+```rust
+let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([col("gender_cd"), col("gender")])
+        .unique(
+            Some(vec!["gender_cd".to_string(), "gender".to_string()]),
+            UniqueKeepStrategy::First,
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", customer_df);
+```
+
+### P-093: 商品データ（df_product）では各カテゴリのコード値だけを保有し、カテゴリ名は保有していない。カテゴリデータ（df_category）と組み合わせて非正規化し、カテゴリ名を保有した新たな商品データを作成せよ。
+
+```rust
+    let product_df = LazyCsvReader::new(product_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let category_df = LazyCsvReader::new(category_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([
+            col("category_small_cd"),
+            col("category_major_name"),
+            col("category_medium_name"),
+            col("category_small_name"),
+        ]);
+
+    let joined = product_df
+        .inner_join(
+            category_df,
+            col("category_small_cd"),
+            col("category_small_cd"),
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", joined);
+```
+
+### P-094: 093 で作成したカテゴリ名付き商品データを以下の仕様でファイル出力せよ。
+
+> CSV, header あり, UTF-8, ./data/output.csv
+
+```rust
+let path = std::path::Path::new("./data/output.csv");
+    let mut file = File::create(path).expect("could not create file");
+
+    CsvWriter::new(&mut file)
+        .has_header(true)
+        .finish(&mut joined)
+        .unwrap();
+```
+
+### P-096: 093 で作成したカテゴリ名付き商品データを以下の仕様でファイル出力せよ。
+
+> CSV, header なし, UTF-8, ./data/output.csv
+
+```rust
+let path = std::path::Path::new("./data/output.csv");
+    let mut file = File::create(path).expect("could not create file");
+
+    CsvWriter::new(&mut file)
+        .has_header(false)
+        .finish(&mut joined)
+        .unwrap();
+```
+
+### P-099: 093 で作成したカテゴリ名付き商品データを以下の仕様でファイル出力せよ。
+
+> TSV, header あり, UTF-8, ./data/output.csv
+
+```rust
+let path = std::path::Path::new("./data/output.tsv");
+    let mut file = File::create(path).expect("could not create file");
+
+    CsvWriter::new(&mut file)
+        .has_header(true)
+        .with_delimiter(b'\t')
+        .finish(&mut joined)
+        .unwrap();
 ```
