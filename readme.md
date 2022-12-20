@@ -413,6 +413,7 @@ let df = LazyCsvReader::new(customer_path)
 ```
 
 //TODO
+
 ### P-019: レシート明細データ（df_receipt）に対し、1 件あたりの売上金額（amount）が高い順にランクを付与し、先頭から 10 件表示せよ。項目は顧客 ID（customer_id）、売上金額（amount）、付与したランクを表示させること。なお、売上金額（amount）が等しい場合は同一順位を付与するものとする。
 
 ### P-020: レシート明細データ（df_receipt）に対し、1 件あたりの売上金額（amount）が高い順にランクを付与し、先頭から 10 件表示せよ。項目は顧客 ID（customer_id）、売上金額（amount）、付与したランクを表示させること。なお、売上金額（amount）が等しい場合でも別順位を付与すること。
@@ -2407,6 +2408,7 @@ let product_df = LazyCsvReader::new(product_path)
 ```
 
 ### P-082: 単価（unit_price）と原価（unit_cost）の欠損値について、それぞれの中央値で補完した新たな商品データを作成せよ。なお、中央値については 1 円未満を丸めること（四捨五入または偶数への丸めで良い）。補完実施後、各項目について欠損が生じていないことも確認すること。
+
 ```rust
 let std_df = LazyCsvReader::new(product_path)
         .has_header(true)
@@ -2442,23 +2444,24 @@ let std_df = LazyCsvReader::new(product_path)
         // .filter(col("price_flag").eq(lit(true))) //フラグが立っているところが中央値になっているか確認用
         .collect()
         .unwrap();
-    
+
     println!("{:?}", joined);
 ```
 
-### P-084: 顧客データ（df_customer）の全顧客に対して全期間の売上金額に占める2019年売上金額の割合を計算し、新たなデータを作成せよ。ただし、売上実績がない場合は0として扱うこと。そして計算した割合が0超のものを抽出し、結果を10件表示せよ。また、作成したデータに欠損が存在しないことを確認せよ。
+### P-084: 顧客データ（df_customer）の全顧客に対して全期間の売上金額に占める 2019 年売上金額の割合を計算し、新たなデータを作成せよ。ただし、売上実績がない場合は 0 として扱うこと。そして計算した割合が 0 超のものを抽出し、結果を 10 件表示せよ。また、作成したデータに欠損が存在しないことを確認せよ。
+
 ```rust
 let customer_df = LazyCsvReader::new(customer_path)
         .has_header(true)
         .finish()
         .unwrap();
-    
+
     let recept_df = LazyCsvReader::new(recept_path)
         .has_header(true)
         .finish()
         .unwrap();
-    
-    
+
+
     let joined = customer_df.left_join(recept_df, col("customer_id"), col("customer_id"))
         .fill_null(lit(0))
         .with_column(
@@ -2472,7 +2475,7 @@ let customer_df = LazyCsvReader::new(customer_path)
             col("amount").sum().alias("total_sum"),
             col("2019_sales").sum().alias("2019_sum")
             ]);
-    
+
     let zero_df = joined.clone()
         .filter(col("2019_sum").eq(lit(0)))
         .with_column(
@@ -2495,14 +2498,14 @@ let customer_df = LazyCsvReader::new(customer_path)
     println!("{}", null_df.collect().unwrap());
 ```
 
-### P-085: 顧客データ（df_customer）の全顧客に対し、郵便番号（postal_cd）を用いてジオコードデータ（df_geocode）を紐付け、新たな顧客データを作成せよ。ただし、1つの郵便番号（postal_cd）に複数の経度（longitude）、緯度（latitude）情報が紐づく場合は、経度（longitude）、緯度（latitude）の平均値を算出して使用すること。また、作成結果を確認するために結果を10件表示せよ。
+### P-085: 顧客データ（df_customer）の全顧客に対し、郵便番号（postal_cd）を用いてジオコードデータ（df_geocode）を紐付け、新たな顧客データを作成せよ。ただし、1 つの郵便番号（postal_cd）に複数の経度（longitude）、緯度（latitude）情報が紐づく場合は、経度（longitude）、緯度（latitude）の平均値を算出して使用すること。また、作成結果を確認するために結果を 10 件表示せよ。
 
 ```rust
 let customer_df = LazyCsvReader::new(customer_path)
         .has_header(true)
         .finish()
         .unwrap();
-    
+
     let geocode_df = LazyCsvReader::new(geocode_path)
         .has_header(true)
         .finish()
@@ -2517,6 +2520,155 @@ let customer_df = LazyCsvReader::new(customer_path)
         .collect()
         .unwrap()
         .head(Some(10));
-    
+
     println!("{:?}", joined);
+```
+
+### P-086: 085 で作成した緯度経度つき顧客データに対し、会員申込店舗コード（application_store_cd）をキーに店舗データ（df_store）と結合せよ。そして申込み店舗の緯度（latitude）・経度情報（longitude)と顧客住所（address）の緯度・経度を用いて申込み店舗と顧客住所の距離（単位：km）を求め、顧客 ID（customer_id）、顧客住所（address）、店舗住所（address）とともに表示せよ。計算式は以下の簡易式で良いものとするが、その他精度の高い方式を利用したライブラリを利用してもかまわない。結果は 10 件表示せよ。
+
+```rust
+fn calc_distance(list: Vec<f64>) -> f64 {
+        let distance = 6371f64
+            * f64::acos(
+                (f64::sin(list[0].to_radians()) * f64::sin(list[2].to_radians()))
+                    + (f64::cos(list[0].to_radians())
+                        * f64::cos(list[2].to_radians())
+                        * f64::cos(list[1].to_radians() - list[3].to_radians())),
+            );
+        return distance;
+    }
+
+    let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let geocode_df = LazyCsvReader::new(geocode_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("postal_cd")])
+        .agg([
+            col("longitude").mean().alias("m_lng"),
+            col("latitude").mean().alias("m_lat"),
+        ]);
+
+    let store_df = LazyCsvReader::new(store_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .select([all(), col("address").alias("store_address")]);
+
+    let joined = customer_df
+        .inner_join(geocode_df, col("postal_cd"), col("postal_cd"))
+        .inner_join(store_df, col("application_store_cd"), col("store_cd"))
+        .select([
+            col("customer_id"),
+            col("address").alias("customer_address"),
+            col("store_address"),
+            as_struct(&[
+                col("latitude"),
+                col("longitude"),
+                col("m_lat"),
+                col("m_lng"),
+            ])
+            .apply(
+                |s| {
+                    let ca = s.struct_().unwrap();
+
+                    let s_lat = &ca.fields()[0];
+                    let s_lng = &ca.fields()[1];
+                    let s_m_lat = &ca.fields()[2];
+                    let s_m_lng = &ca.fields()[3];
+
+                    let ca_lat = s_lat.f64().unwrap();
+                    let ca_lng = s_lng.f64().unwrap();
+                    let ca_m_lat = s_m_lat.f64().unwrap();
+                    let ca_m_lng = s_m_lng.f64().unwrap();
+
+                    let out: Float64Chunked = ca_lat
+                        .into_iter()
+                        .zip(ca_lng)
+                        .zip(ca_m_lat)
+                        .zip(ca_m_lng)
+                        .map(|(((opt_a, opt_b), opt_c), opt_d)| {
+                            match (((opt_a, opt_b), opt_c), opt_d) {
+                                (((Some(a), Some(b)), Some(c)), Some(d)) => {
+                                    Some(calc_distance(vec![a, b, c, d]))
+                                }
+                                _ => None,
+                            }
+                        })
+                        .collect();
+
+                    Ok(out.into_series())
+                },
+                GetOutput::default(),
+            )
+            .alias("distance"),
+        ])
+        .collect()
+        .unwrap()
+        .head(Some(10));
+
+    println!("{:?}", joined);
+```
+
+### P-087: 顧客データ（df_customer）では、異なる店舗での申込みなどにより同一顧客が複数登録されている。名前（customer_name）と郵便番号（postal_cd）が同じ顧客は同一顧客とみなして 1 顧客 1 レコードとなるように名寄せした名寄顧客データを作成し、顧客データの件数、名寄顧客データの件数、重複数を算出せよ。ただし、同一顧客に対しては売上金額合計が最も高いものを残し、売上金額合計が同一もしくは売上実績がない顧客については顧客 ID（customer_id）の番号が小さいものを残すこととする。
+
+```rust
+let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
+
+    let recept_df = LazyCsvReader::new(recept_path)
+        .has_header(true)
+        .finish()
+        .unwrap()
+        .groupby([col("customer_id")])
+        .agg([col("amount").sum()]);
+
+    let joined = customer_df
+        .clone()
+        .left_join(recept_df, col("customer_id"), col("customer_id"))
+        .fill_null(lit(0))
+        .sort(
+            "customer_id",
+            SortOptions {
+                descending: (false),
+                nulls_last: (true),
+            },
+        )
+        .sort(
+            "amount",
+            SortOptions {
+                descending: (true),
+                nulls_last: (true),
+            },
+        )
+        .unique(
+            Some(vec!["customer_name".to_string(), "postal_cd".to_string()]),
+            UniqueKeepStrategy::First,
+        )
+        .collect()
+        .unwrap();
+
+    println!("{:?}", joined);
+
+    // original の顧客データをShapeで確認
+    let count = customer_df.collect().unwrap().shape();
+    println!("origin size : {:?}", count);
+
+    let unique_count = joined.shape();
+    println!("unique size : {:?}", count);
+
+    let diff = count.0 - unique_count.0;
+    println!("diff : {:?}", diff);
+```
+
+### P-089: 売上実績がある顧客を、予測モデル構築のため学習用データとテスト用データに分割したい。それぞれ 8:2 の割合でランダムにデータを分割せよ。
+
+```rust
+
 ```
