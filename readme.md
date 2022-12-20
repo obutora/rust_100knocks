@@ -2670,5 +2670,119 @@ let customer_df = LazyCsvReader::new(customer_path)
 ### P-089: 売上実績がある顧客を、予測モデル構築のため学習用データとテスト用データに分割したい。それぞれ 8:2 の割合でランダムにデータを分割せよ。
 
 ```rust
+    let customer_df = LazyCsvReader::new(customer_path)
+        .has_header(true)
+        .finish()
+        .unwrap();
 
+    let recept_df = LazyCsvReader::new(recept_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .groupby([col("customer_id")])
+    .agg([col("amount").sum().alias("amount")])
+    .filter(col("amount").gt(0));
+
+
+    let joined = customer_df.inner_join(recept_df, col("customer_id"), col("customer_id"))
+        .collect()
+        .unwrap()
+        .sample_frac(1.0, false, true, None)
+        .unwrap();
+
+    let shape = joined.shape();
+    println!("origin: {:?}", shape);
+
+    let train = joined.slice(0, ((shape.0 as f32) * 0.8).floor() as usize);
+    let test = joined.slice(((shape.0 as f32) * 0.8).floor() as i64, ((shape.0 as f32) * 0.2).round() as usize);
+
+    println!("{:?}", train.shape());
+    println!("{:?}", test.shape());
+
+    println!("{:?}", train.tail(Some(10)));
+    println!("{:?}", test.head(Some(10)));
+```
+
+### P-090: レシート明細データ（df_receipt）は 2017 年 1 月 1 日〜2019 年 10 月 31 日までのデータを有している。売上金額（amount）を月次で集計し、学習用に 12 ヶ月、テスト用に 6 ヶ月の時系列モデル構築用データを 3 セット作成せよ。
+
+```rust
+fn ymd_to_ym(ymd: &Series) -> Series {
+    ymd.i64()
+        .unwrap()
+        .into_iter()
+        .map(|ymd| match ymd {
+            Some(ymd) => (ymd as f64 / 100.0).floor() as i32,
+            None => 0i32,
+        })
+        .collect()
+}
+
+
+let recept_df = LazyCsvReader::new(recept_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .select([
+        all(),
+        col("sales_ymd").map(|s| Ok(ymd_to_ym(&s)), GetOutput::default()).alias("sales_ym")
+    ])
+    .groupby([col("sales_ym")])
+    .agg([col("amount").sum().alias("amount")])
+    .sort(
+        "sales_ym",
+        SortOptions {
+            descending: (false),
+            nulls_last: (true),
+        },
+    )
+    .collect()
+    .unwrap();
+
+let train1 = recept_df.clone().slice(0, 12);
+let val1 = recept_df.clone().slice(12, 6);
+
+let train2 = recept_df.slice(6, 12);
+let val2 = recept_df.slice(18, 6);
+
+let train3 = recept_df.slice(12, 12);
+let val3 = recept_df.slice(24, 6);
+
+println!("{:?}", train3);
+println!("{:?}", val3);
+```
+
+### P-091: 顧客データ（df_customer）の各顧客に対し、売上実績がある顧客数と売上実績がない顧客数が 1:1 となるようにアンダーサンプリングで抽出せよ。
+
+```rust
+let customer_df = LazyCsvReader::new(customer_path)
+    .has_header(true)
+    .finish()
+    .unwrap();
+
+let recept_df = LazyCsvReader::new(recept_path)
+    .has_header(true)
+    .finish()
+    .unwrap()
+    .groupby([col("customer_id")])
+    .agg([col("amount").sum().alias("amount")]);
+
+let joined = customer_df.left_join(recept_df, col("customer_id"), col("customer_id"))
+    .select([
+        col("*").exclude(["amount"]),
+        col("amount").fill_null(lit(0)).alias("amount")
+    ]);
+
+let non_zero_df = joined.clone().filter(col("amount").gt(0))
+    .collect().unwrap();
+
+let zero_df = joined.filter(col("amount").eq(0))
+    .collect().unwrap();
+
+println!("non-zero :{:?}", non_zero_df.shape()); //zero_dfよりすくないので、こっちに合わせる
+println!("zero : {:?}", zero_df.shape());
+
+let zero_df = zero_df
+    .sample_n(non_zero_df.shape().0, false, true, None).unwrap();
+
+println!("picked zero : {:?}", zero_df.shape());
 ```
